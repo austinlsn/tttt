@@ -34,7 +34,6 @@ This is an example looper to go through the different setup, looper, and output 
 #include "InputChunkSplitter.h"
 #include "SplitFileAndAddForTransfer.h"
 
-
 using namespace std;
 using namespace IvyStreamHelpers;
 
@@ -47,6 +46,9 @@ struct SelectionTracker{
   void accumulate(TString const& strsel, double const& wgt);
   void print() const;
 };
+
+
+
 void SelectionTracker::accumulate(TString const& strsel, double const& wgt){
   if (!HelperFunctions::checkListVariable(ordered_reqs, strsel)){
     req_sumws_pair_map[strsel] = std::pair<double, double>(0, 0);
@@ -137,22 +139,28 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   TString stroutput = coutput_main + "/" + output_file.data() + ".root"; // This is the output ROOT file.
   TString stroutput_log = coutput_main + "/log_" + output_file.data() + ".out"; // This is the output log file.
   TString stroutput_err = coutput_main + "/log_" + output_file.data() + ".err"; // This is the error log file.
+  TString stroutput_csv = coutput_main + "/" + output_file.data() + ".csv"; // This is the csv file to be filled with important numbers
+  ofstream output_csv;
+  
   IVYout.open(stroutput_log.Data());
   IVYerr.open(stroutput_err.Data());
+  output_csv.open(stroutput_csv);
+
+  output_csv << "Run,Lumi,Event,NtightEle,NtightMu,has SS pair,has 3 SS,Njets,Nbjets,has mass resonance" << std::endl;
 
   // In case the user wants to run on particular files
   std::string input_files;
   extra_arguments.getNamedVal("input_files", input_files);
 
   // Shorthand option for the Run 2 UL analysis proposal
-  bool use_shorthand_Run2_UL_proposal_config = false;
+  bool use_shorthand_Run2_UL_proposal_config = true; // CHANGED
   extra_arguments.getNamedVal("shorthand_Run2_UL_proposal_config", use_shorthand_Run2_UL_proposal_config);
 
   // Options to set alternative muon and electron IDs, or b-tagging WP
   std::string muon_id_name;
   std::string electron_id_name;
   std::string btag_WPname;
-  double minpt_jets = 40;
+  double minpt_jets = 25;	// 40
   double minpt_bjets = 25;
   double minpt_l3 = 20;
   if (use_shorthand_Run2_UL_proposal_config){
@@ -170,9 +178,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     extra_arguments.getNamedVal("minpt_l3", minpt_l3);
   }
 
-  double minpt_miss = 50;
+  double minpt_miss = 0;	// 50
   extra_arguments.getNamedVal("minpt_miss", minpt_miss);
-  double minHT_jets = 300;
+  double minHT_jets = 0;	// 300
   extra_arguments.getNamedVal("minHT_jets", minHT_jets);
 
   if (muon_id_name!=""){
@@ -294,7 +302,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data());
+    TString cinput = (input_files=="" ? strinput + "/DY_2l_M_50_1.root" : strinput + "/" + input_files.data()); // CHANGED FROM '/*.root' 
     IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
@@ -432,9 +440,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
     unsigned int n_traversed = 0;
     unsigned int n_recorded = 0;
-    int nEntries = tin->getNEvents();
+    int nEntries = tin->getNEvents(); 
     IVYout << "Looping over " << nEntries << " events from " << tin->sampleIdentifier << "..." << endl;
-    for (int ev=0; ev<nEntries; ev++){
+    for (int ev=0; ev<nEntries; ev++){ 
       if (SampleHelpers::doSignalInterrupt==1) break;
 
       // Event accumulation in chunks:
@@ -608,6 +616,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         if (mother) bscore = mother->extras.btagDeepFlavB;
         */
       }
+      
       HelperFunctions::appendVector(electrons_selected, electrons_tight);
       HelperFunctions::appendVector(electrons_selected, electrons_fakeable);
       HelperFunctions::appendVector(electrons_selected, electrons_loose);
@@ -702,7 +711,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
       int nQ = 0;
       for (auto const& part:leptons_tight) nQ += (part->pdgId()>0 ? -1 : 1);
-      bool const pass_trileptonSameCharge = (std::abs(nQ)<(6-static_cast<int>(nleptons_tight)));
+      bool const pass_trileptonSameCharge = (std::abs(nQ)<(6-static_cast<int>(nleptons_tight))); // SAME SIGN x3
+      bool has_3_ss = !pass_trileptonSameCharge;
       if (!pass_trileptonSameCharge) continue;
       seltracker.accumulate("Pass 3-lepton same charge veto", wgt);
 
@@ -718,30 +728,32 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       DileptonObject* dilepton_OS_ZCand_tight = nullptr;
       DileptonObject* dilepton_SS_ZCand_tight = nullptr;
       for (auto const& dilepton:dileptons){
-        bool isSS = !dilepton->isOS();
+        bool isSS = !dilepton->isOS(); // SAME SIGN
         bool isTight = dilepton->nTightDaughters()==2;
         bool isSF = dilepton->isSF();
         bool is_LowMass = dilepton->m()<12.;
         bool is_ZClose = std::abs(dilepton->m()-91.2)<15.;
         bool is_DYClose = is_ZClose || is_LowMass;
+	
         if (isSS && isSF && is_LowMass && std::abs(dilepton->getDaughter(0)->pdgId())==11){
           fail_vetos = true;
           break; // No need to look further, selection failed
         }
-        if (isSS && isTight && !dilepton_SS_tight) dilepton_SS_tight = dilepton;
+        if (isSS && isTight && !dilepton_SS_tight) dilepton_SS_tight = dilepton; 
         if (!isSS && isSF && is_DYClose){
-          if (isTight && is_ZClose && !dilepton_OS_ZCand_tight) dilepton_OS_ZCand_tight = dilepton;
+          if (isTight && is_ZClose && !dilepton_OS_ZCand_tight) dilepton_OS_ZCand_tight = dilepton; // HAS MASS RESONANCE (OS)
           else{
             fail_vetos = true;
             break; // No need to look further, selection failed
           }
         }
-        if (isSS && isTight && is_ZClose && !dilepton_SS_ZCand_tight) dilepton_SS_ZCand_tight = dilepton;
+        if (isSS && isTight && is_ZClose && !dilepton_SS_ZCand_tight) dilepton_SS_ZCand_tight = dilepton; // HAS MASS RESONANCE (SS)
       }
       if (fail_vetos) continue;
       seltracker.accumulate("Pass dilepton vetos", wgt);
 
       bool const has_dilepton_SS_tight = (dilepton_SS_tight!=nullptr);
+      bool has_SS_pair = has_dilepton_SS_tight;
       if (!has_dilepton_SS_tight) continue;
       seltracker.accumulate("Has at least one tight SS dilepton", wgt);
 
@@ -804,15 +816,27 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       if (tout){
         // Event weight
         rcd_output.setNamedVal("event_wgt", static_cast<float>(wgt));
-
         rcd_output.setNamedVal("EventNumber", *ptr_EventNumber);
+	
         if (!isData){
           rcd_output.setNamedVal("GenMET_pt", *ptr_genmet_pt);
+	  //double gMETpt = *ptr_genmet_pt; // dereference ptr
+	  //output_csv << ",gMETpt: " << gMETpt; // add to csv
+
           rcd_output.setNamedVal("GenMET_phi", *ptr_genmet_phi);
+	  //double gMETphi = *ptr_genmet_phi;
+	  //output_csv << ",gMETphi: " << gMETphi; 
+
+	  //output_csv << " , "; // blank space to account for no runN/lumi
         }
         else{
-          rcd_output.setNamedVal("RunNumber", *ptr_RunNumber);
-          rcd_output.setNamedVal("LuminosityBlock", *ptr_LuminosityBlock);
+          rcd_output.setNamedVal("RunNumber", *ptr_RunNumber); 
+	  int runN = *ptr_RunNumber; // dereference ptr
+	  output_csv << "Run Number: " << runN; // add to csv  
+
+          rcd_output.setNamedVal("LuminosityBlock", *ptr_LuminosityBlock); // LUMI
+	  double LumiVal;
+	  output_csv << ",Lumi: " << LumiVal;
         }
 
         rcd_output.setNamedVal<float>("HT_ak4jets", HT_ak4jets);
@@ -921,7 +945,18 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       n_recorded++;
 
       if (firstOutputEvent) firstOutputEvent = false;
-    }
+
+      int EventN = *ptr_EventNumber; // dereference ptr
+      output_csv << EventN; // addto csv Event Number: 
+      output_csv << "," << electrons_tight.size(); // NtightEle: 
+      output_csv << "," << muons_tight.size();	   // NtightMu: 
+      output_csv << "," << has_SS_pair;  // ss_diL: 
+      output_csv << "," << has_3_ss; // ss_triL: 
+      output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
+      output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
+      output_csv << "," << (dilepton_OS_ZCand_tight || dilepton_SS_ZCand_tight); // has mResonance: 
+      output_csv << endl;
+    } // end ev entries loop
 
     IVYout << "Number of events recorded: " << n_recorded << " / " << n_traversed << " / " << nEntries << endl;
     nevents_total_traversed += n_traversed;
@@ -940,13 +975,15 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   // Split large files, and add them to the transfer queue from Condor to the target site
   // Does nothing if you are running the program locally because your output is already in the desired location.
   SampleHelpers::splitFileAndAddForTransfer(stroutput);
+  SampleHelpers::splitFileAndAddForTransfer(stroutput_csv);
 
-  // Close the output and error log files
+  // Close the output and error log files (and csv file)
   IVYout.close();
   IVYerr.close();
+  output_csv.close();
 
   return 0;
-}
+} // end ScanChain
 
 
 /*
@@ -1089,6 +1126,8 @@ int main(int argc, char** argv){
 
   // A universal configuration to set the samples directory and tag, on which T2 site they are, and at which data period we are looking.
   SampleHelpers::configure(str_period, Form("skims:%s", str_tag.data()), HostHelpers::kUCSDT2);
+
+
 
   // Run the actual program
   return ScanChain(str_outtag, str_dset, str_proc, xsec, ichunk, nchunks, extra_arguments);
