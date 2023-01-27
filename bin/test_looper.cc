@@ -38,7 +38,7 @@ using namespace std;
 using namespace IvyStreamHelpers;
 
 
-// A class to keep track of events that pass or fail selection
+v// A class to keep track of events that pass or fail selection
 struct SelectionTracker{
   std::vector<TString> ordered_reqs;
   std::unordered_map<TString, std::pair<double, double>> req_sumws_pair_map;
@@ -274,7 +274,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   TFile* foutput = TFile::Open(stroutput, "recreate"); foutput->cd();
   // BaseTree is the wrapper to communicate with ROOT TTrees.
   // SimpleEntry is a container class to communicate with an output BaseTree.
-  SimpleEntry rcd_output;
+  SimpleEntry rcd_output;	// OUTPUT BRANCHES
   BaseTree* tout = new BaseTree("SkimTree");
   tout->setAutoSave(0);
 
@@ -754,7 +754,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
       bool const has_dilepton_SS_tight = (dilepton_SS_tight!=nullptr);
       bool has_SS_pair = has_dilepton_SS_tight;
-      if (!has_dilepton_SS_tight) continue;
+      //if (!has_dilepton_SS_tight) continue; std::cout << "testing2 testing2";
       seltracker.accumulate("Has at least one tight SS dilepton", wgt);
 
       // Do not skip the event if there is an OS Z cand.
@@ -939,7 +939,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef VECTOR_DATA_OUTPUT_DIRECTIVE
 #undef DOUBLEVECTOR_DATA_OUTPUT_DIRECTIVE
 
-        tout->fill();
+        tout->fill();		// not filling?
       }
 
       n_recorded++;
