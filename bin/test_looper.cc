@@ -37,8 +37,7 @@ This is an example looper to go through the different setup, looper, and output 
 using namespace std;
 using namespace IvyStreamHelpers;
 
-
-v// A class to keep track of events that pass or fail selection
+// A class to keep track of events that pass or fail selection
 struct SelectionTracker{
   std::vector<TString> ordered_reqs;
   std::unordered_map<TString, std::pair<double, double>> req_sumws_pair_map;
@@ -146,7 +145,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   IVYerr.open(stroutput_err.Data());
   output_csv.open(stroutput_csv);
 
-  output_csv << "Run,Lumi,Event,NtightEle,NtightMu,has SS pair,has 3 SS,Njets,Nbjets,has mass resonance" << std::endl;
+  output_csv << "Event,NtightEle,NtightMu,has SS pair,has 3 SS,Njets,Nbjets,has mass resonance" << std::endl; // Run,Lumi,
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -533,15 +532,16 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // Make a map of reco. lepton -> gen. prompt lepton so that we can use it for ID scale factor purposes later on.
       // Note that there is no charge matchingm just delta R < 0.2.
       std::vector<ParticleObject*> leptons; leptons.reserve(muons.size()+electrons.size());
-      for (auto const& part:muons) leptons.push_back(part);
+      for (auto const& part:muons) leptons.push_back(part); 
       for (auto const& part:electrons) leptons.push_back(part);
       std::unordered_map<ParticleObject*, GenParticleObject*> lepton_genmatchpart_map;
-      ParticleObjectHelpers::matchParticles(
+      ParticleObjectHelpers::matchParticles( // MATCHING LEPTONS
         ParticleObjectHelpers::kMatchBy_DeltaR, 0.2,
         leptons.begin(), leptons.end(),
         genmatch_promptleptons.begin(), genmatch_promptleptons.end(),
         lepton_genmatchpart_map
       );
+      
 
       // Keep track of leptons
       // ID can be any of the disjoint categories tight, fakeable (yes, not using 'fakable' correctly), or loose.
@@ -626,6 +626,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       unsigned int const nleptons_loose = muons_loose.size() + electrons_loose.size();
       unsigned int const nleptons_selected = nleptons_tight + nleptons_fakeable + nleptons_loose;
 
+      // VECTORS FOR BRANCHES
       std::vector<ParticleObject*> leptons_selected; leptons_selected.reserve(nleptons_selected);
       for (auto const& part:muons_selected) leptons_selected.push_back(dynamic_cast<ParticleObject*>(part));
       for (auto const& part:electrons_selected) leptons_selected.push_back(dynamic_cast<ParticleObject*>(part));
@@ -637,7 +638,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       ParticleObjectHelpers::sortByGreaterPt(leptons_fakeable);
 
       std::vector<ParticleObject*> leptons_tight; leptons_tight.reserve(nleptons_tight);
-      for (auto const& part:muons_tight) leptons_tight.push_back(dynamic_cast<ParticleObject*>(part));
+      for (auto const& part:muons_tight) leptons_tight.push_back(dynamic_cast<ParticleObject*>(part)); 
       for (auto const& part:electrons_tight) leptons_tight.push_back(dynamic_cast<ParticleObject*>(part));
       ParticleObjectHelpers::sortByGreaterPt(leptons_tight);
 
@@ -649,6 +650,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       std::vector<AK4JetObject*> ak4jets_tight_recordable;
       std::vector<AK4JetObject*> ak4jets_tight_selected;
       std::vector<AK4JetObject*> ak4jets_tight_selected_btagged;
+      //      int nJets = ak4jets.size(); // NUMBER OF JETS PER EVENT
       for (auto const& jet:ak4jets){
         float pt = jet->pt();
         float eta = jet->eta();
@@ -696,9 +698,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       if (!pass_HTjets) continue;
       seltracker.accumulate("Pass HT", wgt);
 
-      bool const pass_Nleptons = (nleptons_tight>=2 && nleptons_tight<5);
+      bool const pass_Nleptons = (nleptons_tight == 2 || nleptons_tight == 4); // CHANGED ONLY DILEPTONS   nleptons_tight>=2 && nleptons_tight<5
       if (!pass_Nleptons) continue;
-      seltracker.accumulate("Has >=2 and <=4 tight leptons", wgt);
+      seltracker.accumulate("Has ==2 and ==4 tight leptons", wgt); // Has >=2 and <=4 tight leptons
 
       bool const pass_pTl1 = leptons_tight.front()->pt()>=25.;
       bool const pass_pTl2 = leptons_tight.at(1)->pt()>=20.;
@@ -727,8 +729,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       DileptonObject* dilepton_SS_tight = nullptr;
       DileptonObject* dilepton_OS_ZCand_tight = nullptr;
       DileptonObject* dilepton_SS_ZCand_tight = nullptr;
-      for (auto const& dilepton:dileptons){
-        bool isSS = !dilepton->isOS(); // SAME SIGN
+      for (auto const& dilepton:dileptons){ // DILEPTON CUTS
+        bool isSS = !dilepton->isOS();
         bool isTight = dilepton->nTightDaughters()==2;
         bool isSF = dilepton->isSF();
         bool is_LowMass = dilepton->m()<12.;
@@ -748,18 +750,27 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           }
         }
         if (isSS && isTight && is_ZClose && !dilepton_SS_ZCand_tight) dilepton_SS_ZCand_tight = dilepton; // HAS MASS RESONANCE (SS)
-      }
+      
+	// ADDED electrons only:
+	if (std::abs(dilepton->getDaughter(0)->pdgId())!=11) {
+	  fail_vetos = true;
+	}
+
+
+      }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("Pass dilepton vetos", wgt);
 
+      bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
+      if (!has_dilepton_OS_ZCand_tight) continue; // tight OS only
+
+
       bool const has_dilepton_SS_tight = (dilepton_SS_tight!=nullptr);
-      bool has_SS_pair = has_dilepton_SS_tight;
-      //if (!has_dilepton_SS_tight) continue; std::cout << "testing2 testing2";
-      seltracker.accumulate("Has at least one tight SS dilepton", wgt);
+
+      seltracker.accumulate("Has at least one tight OS dilepton", wgt); // CHANGED Has at least one tight SS dilepton
 
       // Do not skip the event if there is an OS Z cand.
       // Instead, record a mass variable (=-1 if it doesn't exist).
-      bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
       rcd_output.setNamedVal<float>("mass_OS_ZCand_tight", (has_dilepton_OS_ZCand_tight ? dilepton_OS_ZCand_tight->mass() : -1.f));
       seltracker.accumulate("Has no OS Z candidate", wgt*static_cast<double>(!has_dilepton_OS_ZCand_tight));
 
@@ -852,7 +863,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           BRANCH_VECTOR_COMMAND(float, pt) \
           BRANCH_VECTOR_COMMAND(float, eta) \
           BRANCH_VECTOR_COMMAND(float, phi) \
-          BRANCH_VECTOR_COMMAND(float, mass) 
+          BRANCH_VECTOR_COMMAND(float, mass)
+
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> leptons_##NAME;
           BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
@@ -874,8 +886,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) leptons_##NAME.push_back(NAME);
             BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
-          }
-
+          } // end for part:leptons_selected
+	  
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("leptons_%s", #NAME), leptons_##NAME);
           BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
@@ -883,10 +895,39 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef BRANCH_VECTOR_COMMANDS
         }
 
+
+	// Record dileptons
+	{
+#define BRANCH_VECTOR_COMMANDS \
+	  BRANCH_VECTOR_COMMAND(float, pt)	\
+	  BRANCH_VECTOR_COMMAND(float, mass)
+
+#define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> dileptons_##NAME;
+          BRANCH_VECTOR_COMMANDS;
+#undef BRANCH_VECTOR_COMMAND
+
+          for (auto const& dilepton:dileptons){ // likely only ever 1 dilepton, sometimes 2
+            float pt   = dilepton->pt();	// vector sum 
+	    float mass = dilepton_OS_ZCand_tight->mass();
+
+#define BRANCH_VECTOR_COMMAND(TYPE, NAME) dileptons_##NAME.push_back(NAME);
+            BRANCH_VECTOR_COMMANDS;
+#undef BRANCH_VECTOR_COMMAND
+          } // end for dilepton:dileptons
+
+#define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("dileptons_%s", #NAME), dileptons_##NAME);
+          BRANCH_VECTOR_COMMANDS;
+#undef BRANCH_VECTOR_COMMAND
+
+#undef BRANCH_VECTOR_COMMANDS
+        }
+
+	
+
         // Record ak4jets
         {
 #define BRANCH_VECTOR_COMMANDS \
-          BRANCH_VECTOR_COMMAND(bool, pass_btagging_selection) \
+          BRANCH_VECTOR_COMMAND(bool, pass_btagging_selection)	 \
           BRANCH_VECTOR_COMMAND(bool, pass_regularJet_selection) \
           BRANCH_VECTOR_COMMAND(int, hadronFlavour) \
           BRANCH_VECTOR_COMMAND(float, pt) \
@@ -939,7 +980,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef VECTOR_DATA_OUTPUT_DIRECTIVE
 #undef DOUBLEVECTOR_DATA_OUTPUT_DIRECTIVE
 
-        tout->fill();		// not filling?
+        tout->fill();		// output TTree
       }
 
       n_recorded++;
@@ -950,7 +991,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
       output_csv << "," << muons_tight.size();	   // NtightMu: 
-      output_csv << "," << has_SS_pair;  // ss_diL: 
+      output_csv << "," << has_dilepton_SS_tight;  // ss_diL: 
       output_csv << "," << has_3_ss; // ss_triL: 
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
