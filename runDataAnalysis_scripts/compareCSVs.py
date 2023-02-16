@@ -20,5 +20,6 @@ def compareCSVs(file1, file2):
                         break; # move to the next row in csv1
 
 
-compareCSVs('/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/austinTest/2018/TTTT.csv'
-            , '/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/austinTest/2018/TTTTYash.csv')
+compareCSVs('/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'
+            ,'/home/users/yash/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv')
+# '/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/austinTest/2018/DY_2l_M_50Yash.csv')

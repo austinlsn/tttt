@@ -144,7 +144,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   IVYerr.open(stroutput_err.Data());
   output_csv.open(stroutput_csv);
 
-  output_csv << "Event,NtightEle,NtightMu,has SS pair,has 3 SS,Njets,Nbjets,has mass resonance" << std::endl; // Run,Lumi,
+  output_csv << "Event, nTightEle, nTightMu, hasOS, nJets, nBJets, hasZCand" << std::endl; // Run,Lumi,
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -673,8 +673,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           if (recordJet) ak4jets_tight_recordable.push_back(jet);
         }
       }
-      int numJets = ak4jets_tight_recordable.size();
-      seltracker.accumulate("nJets passing selections", numJets);
+
       unsigned int const nak4jets_tight_selected = ak4jets_tight_selected.size();
       unsigned int const nak4jets_tight_selected_btagged = ak4jets_tight_selected_btagged.size();
 
@@ -684,6 +683,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // BEGIN PRESELECTION
       seltracker.accumulate("Full sample", wgt);
 
+      int numJets = ak4jets_tight_recordable.size();
+      seltracker.accumulate("nJets passing selections", numJets);
       //bool const pass_Nj_geq_2 = nak4jets_tight_selected>=2;
       //bool const pass_Nb_geq_2 = nak4jets_tight_selected_btagged>=2;
       //if (!(pass_Nj_geq_2 && pass_Nb_geq_2)) continue;
@@ -700,29 +701,32 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       if (!pass_HTjets) continue;
       seltracker.accumulate("Pass HT (necessary?)", wgt);
 
-      bool const pass_Nleptons = (nleptons_tight == 2); // CHANGED, ONLY DILEPTONS   nleptons_tight>=2 && nleptons_tight<5
+      bool const pass_Nleptons = (nleptons_tight == 2); // CHANGED, ONLY 2 leptons   nleptons_tight>=2 && nleptons_tight<5
       if (!pass_Nleptons) continue;
       seltracker.accumulate("Has ==2 tight leptons", wgt); // Has >=2 and <=4 tight leptons
+
+      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11); // Added tight electrons only cut 
+      if (!pass_electrons) continue;
 
       bool const pass_pTl1 = leptons_tight.front()->pt()>=25.;
       bool const pass_pTl2 = leptons_tight.at(1)->pt()>=20.;
       if (!(pass_pTl1 && pass_pTl2)) continue;
       seltracker.accumulate("Pass pTl1 and pTl2", wgt);
 
-      bool const pass_pTl3 = (nleptons_tight<3 || leptons_tight.at(2)->pt()>=minpt_l3);
-      if (!pass_pTl3) continue;
-      seltracker.accumulate("Pass pTl3 if >=3 tight leptons", wgt);
+      // bool const pass_pTl3 = (nleptons_tight<3 || leptons_tight.at(2)->pt()>=minpt_l3);
+      // if (!pass_pTl3) continue;
+      // seltracker.accumulate("Pass pTl3 if >=3 tight leptons", wgt);
 
-      int nQ = 0;
-      for (auto const& part:leptons_tight) nQ += (part->pdgId()>0 ? -1 : 1);
-      bool const pass_trileptonSameCharge = (std::abs(nQ)<(6-static_cast<int>(nleptons_tight))); // SAME SIGN x3
-      bool has_3_ss = !pass_trileptonSameCharge;
-      if (!pass_trileptonSameCharge) continue;
-      seltracker.accumulate("Pass 3-lepton same charge veto", wgt);
+      // int nQ = 0;
+      // for (auto const& part:leptons_tight) nQ += (part->pdgId()>0 ? -1 : 1);
+      // bool const pass_trileptonSameCharge = (std::abs(nQ)<(6-static_cast<int>(nleptons_tight))); // SAME SIGN x3
+      // bool has_3_ss = !pass_trileptonSameCharge;
+      // if (!pass_trileptonSameCharge) continue;
+      // seltracker.accumulate("Pass 3-lepton same charge veto", wgt);
 
-      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11); // Added tight electrons only cut 
-      if (!pass_electrons) continue;
-      
+
+
+      /////////DILEPTONS/////////      
       // Construct all possible dilepton pairs
       // Note that loose leptons are included as well in the 'selected' collection
       // so that dilepton vetos can be done easily next.
@@ -732,6 +736,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // Dilepton vetos
       bool fail_vetos = false;
       DileptonObject* dilepton_SS_tight = nullptr;
+      DileptonObject* dilepton_OS_tight = nullptr;
       DileptonObject* dilepton_OS_ZCand_tight = nullptr;
       DileptonObject* dilepton_SS_ZCand_tight = nullptr;
       for (auto const& dilepton:dileptons){ // DILEPTON CUTS
@@ -741,47 +746,46 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         bool is_LowMass = dilepton->m()<12.;
         bool is_ZClose = std::abs(dilepton->m()-91.2)<15.;
         bool is_DYClose = is_ZClose || is_LowMass;
+
+	// No Same-sign events right now:
+        if (isSS) {fail_vetos = true; break;} // only 2 leptons per event so this break is fine.
+
+	// if (isSS && isSF && is_LowMass && std::abs(dilepton->getDaughter(0)->pdgId())==11) {
+        //   fail_vetos = true;
+        //   break; // No need to look further, selection failed
+        // }
 	
-        if (isSS && isSF && is_LowMass && std::abs(dilepton->getDaughter(0)->pdgId())==11) {
-          fail_vetos = true;
-          break; // No need to look further, selection failed
+        // if (isSS && isTight && !dilepton_SS_tight) dilepton_SS_tight = dilepton; 
+	// if (isSS && isTight && is_ZClose && !dilepton_SS_ZCand_tight) dilepton_SS_ZCand_tight = dilepton; // HAS MASS RESONANCE (SS)
+	
+	if (!isSS && isSF && is_DYClose){
+          if (isTight && is_ZClose && !dilepton_OS_ZCand_tight) dilepton_OS_ZCand_tight = dilepton; // marking Z Boson candidates
+          else{fail_vetos = true; break;} // No need to look further, selection failed
         }
-        if (isSS && isTight && !dilepton_SS_tight) dilepton_SS_tight = dilepton; 
-        if (!isSS && isSF && is_DYClose){
-          if (isTight && is_ZClose && !dilepton_OS_ZCand_tight) dilepton_OS_ZCand_tight = dilepton; // HAS MASS RESONANCE (OS)
-          else{
-            fail_vetos = true;
-            break; // No need to look further, selection failed
-          }
-        }
-        if (isSS && isTight && is_ZClose && !dilepton_SS_ZCand_tight) dilepton_SS_ZCand_tight = dilepton; // HAS MASS RESONANCE (SS)
-      
 
       }	// end for dilepton:dileptons
+
       if (fail_vetos) continue;
       seltracker.accumulate("Pass dilepton vetos", wgt);
+      bool const has_dilepton_OS_tight = (dilepton_OS_tight!=nullptr); // needed for csv output
 
-
+      bool const has_dilepton_SS_ZCand_tight = (dilepton_SS_ZCand_tight!=nullptr);
       bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
-      if (!has_dilepton_OS_ZCand_tight) continue; // events with tight OS only
-      bool const has_dilepton_SS_tight = (dilepton_SS_tight!=nullptr);
-      seltracker.accumulate("Has at least one tight OS dilepton", wgt); // CHANGED Has at least one tight SS dilepton
+      if (!has_dilepton_OS_ZCand_tight) continue; // events with tight OS ZCand only
+
 
       // Do not skip the event if there is an OS Z cand.
       // Instead, record a mass variable (=-1 if it doesn't exist).
       rcd_output.setNamedVal<float>("mass_OS_ZCand_tight", (has_dilepton_OS_ZCand_tight ? dilepton_OS_ZCand_tight->mass() : -1.f));
-      seltracker.accumulate("Has no OS Z candidate", wgt*static_cast<double>(!has_dilepton_OS_ZCand_tight));
 
       // Do not skip the event if there is an SS Z cand.
       // Instead, record a mass variable (=-1 if it doesn't exist).
-      bool const has_dilepton_SS_ZCand_tight = (dilepton_SS_ZCand_tight!=nullptr);
+
       rcd_output.setNamedVal<float>("mass_SS_ZCand_tight", (has_dilepton_SS_ZCand_tight ? dilepton_SS_ZCand_tight->mass() : -1.f));
-      seltracker.accumulate("Has no SS Z candidate", wgt*static_cast<double>(!has_dilepton_SS_ZCand_tight));
 
-      // ADD JET FILTERS
-      
-
-
+      seltracker.accumulate("Has OS Z candidate", wgt*static_cast<double>(has_dilepton_OS_ZCand_tight));
+      seltracker.accumulate("Has SS Z candidate", wgt*static_cast<double>(has_dilepton_SS_ZCand_tight));
+      ///////END DILEPTONS///////      
 
 
 
@@ -925,7 +929,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef BRANCH_VECTOR_COMMAND
 
           for (auto const& dilepton:dileptons) {
-	    if (dilepton == dilepton_OS_ZCand_tight && std::abs(dilepton->getDaughter(0)->pdgId())==11) {
+	    if (has_dilepton_OS_ZCand_tight) {
 	      //----------------------------------------//
 	      float pt1 = dilepton->getDaughter_leadingPt()->pt();
 	      float pt2 = dilepton->getDaughter_subleadingPt()->pt();
@@ -955,16 +959,12 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      auto it_genmatch2 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_subleadingPt()));
 	      bool is_genmatched_prompt2 = it_genmatch2!=lepton_genmatchpart_map.end() && it_genmatch2->second!=nullptr;
 
-	      if (is_genmatched_prompt1) {
+	      if (is_genmatched_prompt1 && is_genmatched_prompt2) {
 		genmatch_leadingPdgId = it_genmatch1->second->pdgId();
-	      };
-	      if (!is_genmatched_prompt1) {
-		genmatch_leadingOther = 33;
-	      };
-	      if (is_genmatched_prompt2) {
 		genmatch_trailingPdgId = it_genmatch2->second->pdgId();
-		  };		
-	      if (!is_genmatched_prompt2) {
+	      };
+	      if (!is_genmatched_prompt1 || !is_genmatched_prompt2) {
+		genmatch_leadingOther = 33;
 		genmatch_trailingOther = 33;
 	      };
 	      //-- END GEN MATCHING --//		
@@ -1051,11 +1051,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
       output_csv << "," << muons_tight.size();	   // NtightMu: 
-      output_csv << "," << has_dilepton_SS_tight;  // ss_diL: 
-      output_csv << "," << has_3_ss; // ss_triL: 
+      output_csv << "," << has_dilepton_OS_tight;  // os_diL: 
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
-      output_csv << "," << (dilepton_OS_ZCand_tight || dilepton_SS_ZCand_tight); // has mResonance: 
+      output_csv << "," << (has_dilepton_OS_ZCand_tight || has_dilepton_SS_ZCand_tight); 
       output_csv << endl;
     } // end ev entries loop
 

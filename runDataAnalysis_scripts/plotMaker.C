@@ -15,23 +15,25 @@ void DrawBranchToHist(string inFileName, string outFileName, string branchName,i
   SkimTree->SetBranchAddress(branchName.c_str(), &branch);
   
   TH1F *hist = new TH1F(branchName.c_str(), branchName.c_str(), nbins, xMin, xMax);
-    // loop to fill hist w/ branch's values
-    for (unsigned int i = 0; i < SkimTree->GetEntries(); i++) {
-      SkimTree->GetEntry(i);
-	
-      for (unsigned int j = 0; j < branch->size(); j++) {
-	hist->Fill((*branch)[j]);
-      }	// end for j
-    }	// end for i
-
-    // draw hist and write to output file:
-    hist->Draw();
-    hist->GetXaxis()->SetTitle(XaxisTitle.c_str());
-    // Create output file
-    TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
-    outFile->Delete(Form("%s;*",branchName.c_str())); // Delete any existing histograms with the same name
-    hist->Write();
-    outFile->Close();
+  gROOT->SetStyle("Plain");
+  gStyle->SetOptStat(111111);
+  // loop to fill hist w/ branch's values
+  for (unsigned int i = 0; i < SkimTree->GetEntries(); i++) {
+    SkimTree->GetEntry(i);
+    
+    for (unsigned int j = 0; j < branch->size(); j++) {
+      hist->Fill((*branch)[j]);
+    }	// end for j
+  }	// end for i
+  
+  // draw hist and write to output file:
+  hist->Draw();
+  hist->GetXaxis()->SetTitle(XaxisTitle.c_str());
+  // Create output file
+  TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
+  outFile->Delete(Form("%s;*",branchName.c_str())); // Delete any existing histograms with the same name
+  hist->Write();
+  outFile->Close();
 } // end DrawBranchToHist
 
 void make2Dhist(string inFileName, string outFileName) {
