@@ -158,9 +158,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::string muon_id_name;
   std::string electron_id_name;
   std::string btag_WPname;
-  double minpt_jets = 25;	// 40
-  double minpt_bjets = 25;
-  double minpt_l3 = 20;
+  double minpt_jets = 30;	// 40
+  double minpt_bjets = 30;
+  double minpt_l3 = 0;
   if (use_shorthand_Run2_UL_proposal_config){
     muon_id_name = electron_id_name = "TopMVA_Run2";
     btag_WPname = "loose";
@@ -646,7 +646,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       /************/
       double HT_ak4jets=0;
       auto const& ak4jets = jetHandler.getAK4Jets();
-      int numJets = ak4jets.size(); // no cuts on jets yet
       std::vector<AK4JetObject*> ak4jets_tight_recordable;
       std::vector<AK4JetObject*> ak4jets_tight_selected;
       std::vector<AK4JetObject*> ak4jets_tight_selected_btagged;
@@ -674,6 +673,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           if (recordJet) ak4jets_tight_recordable.push_back(jet);
         }
       }
+      int numJets = ak4jets_tight_recordable.size();
+      seltracker.accumulate("nJets passing selections", numJets);
       unsigned int const nak4jets_tight_selected = ak4jets_tight_selected.size();
       unsigned int const nak4jets_tight_selected_btagged = ak4jets_tight_selected_btagged.size();
 
@@ -683,20 +684,21 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // BEGIN PRESELECTION
       seltracker.accumulate("Full sample", wgt);
 
-      bool const pass_Nj_geq_2 = nak4jets_tight_selected>=2;
-      bool const pass_Nb_geq_2 = nak4jets_tight_selected_btagged>=2;
-      if (!(pass_Nj_geq_2 && pass_Nb_geq_2)) continue;
-      seltracker.accumulate("Pass Nj>=2 and Nb>=2", wgt);
+      //bool const pass_Nj_geq_2 = nak4jets_tight_selected>=2;
+      //bool const pass_Nb_geq_2 = nak4jets_tight_selected_btagged>=2;
+      //if (!(pass_Nj_geq_2 && pass_Nb_geq_2)) continue;
+      //seltracker.accumulate("Pass Nj>=2 and Nb>=2", wgt);
 
       double const pTmiss = eventmet->pt();
       double const phimiss = eventmet->phi();
-      bool const pass_pTmiss = pTmiss>=minpt_miss;
-      if (!pass_pTmiss) continue;
-      seltracker.accumulate("Pass pTmiss", wgt);
+      //bool const pass_pTmiss = pTmiss>=minpt_miss;
+      // if (!pass_pTmiss) continue;
+
+      //seltracker.accumulate("Pass pTmiss", wgt);
 
       bool const pass_HTjets = HT_ak4jets>=minHT_jets;
       if (!pass_HTjets) continue;
-      seltracker.accumulate("Pass HT", wgt);
+      seltracker.accumulate("Pass HT (necessary?)", wgt);
 
       bool const pass_Nleptons = (nleptons_tight == 2); // CHANGED, ONLY DILEPTONS   nleptons_tight>=2 && nleptons_tight<5
       if (!pass_Nleptons) continue;
@@ -718,7 +720,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       if (!pass_trileptonSameCharge) continue;
       seltracker.accumulate("Pass 3-lepton same charge veto", wgt);
 
-      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 || abs(leptons_selected.front()->pdgId())==11); // Added electrons only cut 
+      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11); // Added tight electrons only cut 
       if (!pass_electrons) continue;
       
       // Construct all possible dilepton pairs
@@ -740,7 +742,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         bool is_ZClose = std::abs(dilepton->m()-91.2)<15.;
         bool is_DYClose = is_ZClose || is_LowMass;
 	
-        if (isSS && isSF && is_LowMass && std::abs(dilepton->getDaughter(0)->pdgId())==11){
+        if (isSS && isSF && is_LowMass && std::abs(dilepton->getDaughter(0)->pdgId())==11) {
           fail_vetos = true;
           break; // No need to look further, selection failed
         }
@@ -925,19 +927,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           for (auto const& dilepton:dileptons) {
 	    if (dilepton == dilepton_OS_ZCand_tight && std::abs(dilepton->getDaughter(0)->pdgId())==11) {
 	      //----------------------------------------//
-	      //float pt1 = dilepton->getDaughter(0)->pt();
 	      float pt1 = dilepton->getDaughter_leadingPt()->pt();
 	      float pt2 = dilepton->getDaughter_subleadingPt()->pt();
-	      //float pt2 = dilepton->getDaughter(1)->pt();
 	      float phi1 = dilepton->getDaughter_leadingPt()->phi();
 	      float phi2 = dilepton->getDaughter_subleadingPt()->phi();
-
-	      // float pt   = std::sqrt(
-	      // 			     std::pow((pt1*std::sin(phi1) + pt2*std::sin(phi2)),2) 
-	      // 			     + 
-	      // 			     std::pow((pt1*std::cos(phi1) + pt2*std::cos(phi2)),2)
-	      // 			     ); // vector sum 
-
 	      float pt = std::sqrt(std::pow((dilepton->p4().px()),2)
 				   +std::pow((dilepton->p4().py()),2));
 	      float mass         = dilepton_OS_ZCand_tight->mass();
