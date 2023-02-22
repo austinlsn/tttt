@@ -300,7 +300,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    TString cinput = (input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root") : strinput + "/" + input_files.data()); // CHANGED FROM '/*.root' 
+    TString cinput = (input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root") : strinput + "/" + input_files.data()); // CHANGED FROM '/*.root' 
     IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
@@ -709,6 +709,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 
 				   && abs(leptons_tight.at(1)->pdgId())==11); // Added tight electrons only cut 
       if (!pass_electrons) continue;
+      seltracker.accumulate("has only electrons", wgt);
 
       bool const pass_pTl1 = leptons_tight.front()->pt()>=25.;
       bool const pass_pTl2 = leptons_tight.at(1)->pt()>=20.;
@@ -737,8 +738,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
 	if (isSF && isTight && is_ZClose) {
 	  if (isSS && !dilepton_SS_ZCand_tight) {dilepton_SS_ZCand_tight = dilepton;} // marking Z Boson candidates SS
-	  if (!isSS && !dilepton_OS_ZCand_tight) {dilepton_OS_ZCand_tight = dilepton;} // marking Z Boson candidates SS
-	  else {break;}		// don't veto
+	  if (!isSS && !dilepton_OS_ZCand_tight) {dilepton_OS_ZCand_tight = dilepton;} // marking Z Boson candidates OS
+	  //else {break;}		// don't veto
 	}
 	else {fail_vetos = true; break;} // Only one dilepton per event so the break is fine here.
 
@@ -835,9 +836,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
 
 
-	// Record SS electon-electron pairs
+	// Record SS AND OS electon-electron pairs
 	{
-	if (has_dilepton_SS_ZCand_tight) {
 #define BRANCH_VECTOR_COMMANDS				    \
 	  BRANCH_VECTOR_COMMAND(int, genmatch_leadingPdgId) \
 	  BRANCH_VECTOR_COMMAND(int, genmatch_trailingPdgId)\
@@ -856,8 +856,12 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> ee_SS_##NAME;
           BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
-
+	  int ndileptons = 0;
           for (auto const& dilepton:dileptons) {
+	    ndileptons++;
+	    if (ndileptons == 0) {
+	    if (has_dilepton_SS_ZCand_tight) {
+	      std::cout << "SS, event number: " << (*ptr_EventNumber) << endl;
 	      //----------------------------------------//
 	      float pt1 = dilepton->getDaughter_leadingPt()->pt();
 	      float pt2 = dilepton->getDaughter_subleadingPt()->pt();
@@ -885,11 +889,13 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      auto it_genmatch2 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_subleadingPt()));
 	      bool is_genmatched_prompt2 = it_genmatch2!=lepton_genmatchpart_map.end() && it_genmatch2->second!=nullptr;
 
-	      if (is_genmatched_prompt1 && is_genmatched_prompt2) {
+	      if (is_genmatched_prompt1) {
 	      	if (*ptr_EventNumber == 49216625) {std::cout << "event 49216625, inside genmatch cut. ";}
 	      	leadingPdgId   = dilepton->getDaughter_leadingPt()->pdgId();		
-	      	trailingPdgId  = dilepton->getDaughter_subleadingPt()->pdgId();
 	      	genmatch_leadingPdgId = it_genmatch1->second->pdgId();		
+	      }
+	      if (is_genmatched_prompt2) {
+	      	trailingPdgId  = dilepton->getDaughter_subleadingPt()->pdgId();
 	      	genmatch_trailingPdgId = it_genmatch2->second->pdgId();
 	      }
 		
@@ -909,7 +915,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) ee_SS_##NAME.push_back(NAME);
 	      BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
-
+	    } // end if SS_ZCand_tight
+	    } // end ndileptons == 0
 	  } // end for dilepton:dileptons
 
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("ee_SS_%s", #NAME), ee_SS_##NAME);
@@ -917,14 +924,13 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef BRANCH_VECTOR_COMMAND
 
 #undef BRANCH_VECTOR_COMMANDS
-	} // end if SS_ZCand_tight
-        }
+        } 
 
 
 
 	// Record OS electon-electron pairs
 	{
-	if (has_dilepton_OS_ZCand_tight) {
+
 #define BRANCH_VECTOR_COMMANDS				    \
 	  BRANCH_VECTOR_COMMAND(int, genmatch_leadingPdgId) \
 	  BRANCH_VECTOR_COMMAND(int, genmatch_trailingPdgId)\
@@ -945,6 +951,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef BRANCH_VECTOR_COMMAND
 
           for (auto const& dilepton:dileptons) {
+	    if (has_dilepton_OS_ZCand_tight) {
 	      //----------------------------------------//
 	      float pt1 = dilepton->getDaughter_leadingPt()->pt();
 	      float pt2 = dilepton->getDaughter_subleadingPt()->pt();
@@ -997,6 +1004,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
 
+	    } // end if OS_ZCand_tight
 	  } // end for dilepton:dileptons
 
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("ee_OS_%s", #NAME), ee_OS_##NAME);
@@ -1004,98 +1012,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #undef BRANCH_VECTOR_COMMAND
 
 #undef BRANCH_VECTOR_COMMANDS
-	} // end if OS_ZCand_tight
+
         }
 
-  
-	/*
-	// Record SS electron-electron pairs
-	{
-	if (has_dilepton_SS_ZCand_tight) {
-	  std::cout << "has SS, event number: " << (*ptr_EventNumber) << endl;
-#define BRANCH_VECTOR_COMMANDS				    \
-          BRANCH_VECTOR_COMMAND(int, genmatch_leadingPdgId) \
-	  BRANCH_VECTOR_COMMAND(int, genmatch_trailingPdgId)\
-	  BRANCH_VECTOR_COMMAND(float, pt)	        \
-	  BRANCH_VECTOR_COMMAND(float, leadingPt)	\
-	  BRANCH_VECTOR_COMMAND(float, trailingPt)	\
-	  BRANCH_VECTOR_COMMAND(float, leading_eta)	\
-	  BRANCH_VECTOR_COMMAND(float, trailing_eta)	\
-	  BRANCH_VECTOR_COMMAND(float, leading_phi)	\
-	  BRANCH_VECTOR_COMMAND(float, trailing_phi)	\
-	  BRANCH_VECTOR_COMMAND(int, leadingPdgId)	\
-	  BRANCH_VECTOR_COMMAND(int, trailingPdgId)	\
-	  BRANCH_VECTOR_COMMAND(int, nJets)		\
-	  BRANCH_VECTOR_COMMAND(float, mass)
-
-#define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> ee_SS_##NAME;
-          BRANCH_VECTOR_COMMANDS;
-#undef BRANCH_VECTOR_COMMAND
-
-          for (auto const& dilepton:dileptons) {
-	      //----------------------------------------//
-	      float pt1 = dilepton->getDaughter_leadingPt()->pt();
-	      float pt2 = dilepton->getDaughter_subleadingPt()->pt();
-	      float phi1 = dilepton->getDaughter_leadingPt()->phi();
-	      float phi2 = dilepton->getDaughter_subleadingPt()->phi();
-	      float pt = std::sqrt(std::pow((dilepton->p4().px()),2)
-				   +std::pow((dilepton->p4().py()),2));
-	      float mass         = dilepton_SS_ZCand_tight->mass();
-	      float leadingPt    = dilepton->getDaughter_leadingPt()->pt();
-	      float trailingPt   = dilepton->getDaughter_subleadingPt()->pt();
-	      float leading_phi  = dilepton->getDaughter_leadingPt()->phi();
-	      float trailing_phi = dilepton->getDaughter_subleadingPt()->phi();
-	      float leading_eta  = dilepton->getDaughter_leadingPt()->eta();
-	      float trailing_eta = dilepton->getDaughter_subleadingPt()->eta();
-	      int nJets          = numJets; // no cuts on jets
-
-	      //-- GEN MATCHING --//
-	      int leadingPdgId;
-	      int trailingPdgId;
-	      int genmatch_leadingPdgId;
-	      int genmatch_trailingPdgId;
-
-
-	      auto it_genmatch1 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_leadingPt()));
-	      bool is_genmatched_prompt1 = it_genmatch1!=lepton_genmatchpart_map.end() && it_genmatch1->second!=nullptr;
-	      auto it_genmatch2 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_subleadingPt()));
-	      bool is_genmatched_prompt2 = it_genmatch2!=lepton_genmatchpart_map.end() && it_genmatch2->second!=nullptr;
-	      std::cout << "has SS, event number: " << (*ptr_EventNumber) << endl;
-	      // separate ifs since SS will have just one charge flip
-	      if (is_genmatched_prompt1) { 
-		leadingPdgId = dilepton->getDaughter_leadingPt()->pdgId();		
-		genmatch_leadingPdgId = it_genmatch1->second->pdgId();		
-	      }
-	      if (is_genmatched_prompt2) {
-		trailingPdgId = dilepton->getDaughter_subleadingPt()->pdgId();
-		genmatch_trailingPdgId = it_genmatch2->second->pdgId();
-	      }
-	      if (!is_genmatched_prompt1) {
-	      	genmatch_leadingPdgId = 33;
-	      	std::cout << "leading daughter, other: " << (*ptr_EventNumber) << endl;
-	      }
-	      if (!is_genmatched_prompt2) {
-	      	genmatch_trailingPdgId = 33;
-		std::cout << "trailing daughter, other: " << (*ptr_EventNumber) << endl;
-	      }
-	  
-	      n_branched++;
-	      //-- END GEN MATCHING --//		
-	      //----------------------------------------//	
-#define BRANCH_VECTOR_COMMAND(TYPE, NAME) ee_SS_##NAME.push_back(NAME);
-	      BRANCH_VECTOR_COMMANDS;
-#undef BRANCH_VECTOR_COMMAND
-
-	  } // end for dilepton:dileptons
-
-#define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("ee_SS_%s", #NAME), ee_SS_##NAME);
-          BRANCH_VECTOR_COMMANDS;
-#undef BRANCH_VECTOR_COMMAND
-
-#undef BRANCH_VECTOR_COMMANDS
-	} // end if SS_ZCand_tight
-        }
-	*/
 
         // Record ak4jets
         {

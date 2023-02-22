@@ -129,18 +129,18 @@ int plotMaker() {
   DrawBranchToHist(inFile, outFile, "ee_OS_mass", 50,75,105, "mass (GeV/c^2)");
   DrawBranchToHist(inFile, outFile, "ee_OS_nJets", 15,0,15, "# jets / event");
 
-  // DrawBranchToHist(inFile, outFile, "ee_SS_pt", 50,0,200, "pT (GeV/c)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_leadingPt", 50,0,200, "pT (GeV/c)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_trailingPt", 50,0,200, "pT (GeV/c)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_leading_eta", 50,-3,3, "eta");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_trailing_eta", 50,-3,3, "eta");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_leading_phi", 100,-4,4, "phi (rad)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_trailing_phi", 100,-4,4, "phi (rad)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_mass", 50,75,105, "mass (GeV/c^2)");
-  // DrawBranchToHist(inFile, outFile, "ee_SS_nJets", 15,0,15, "# jets / event");
+  DrawBranchToHist(inFile, outFile, "ee_SS_pt", 50,0,200, "pT (GeV/c)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_leadingPt", 50,0,200, "pT (GeV/c)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_trailingPt", 50,0,200, "pT (GeV/c)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_leading_eta", 50,-3,3, "eta");
+  DrawBranchToHist(inFile, outFile, "ee_SS_trailing_eta", 50,-3,3, "eta");
+  DrawBranchToHist(inFile, outFile, "ee_SS_leading_phi", 100,-4,4, "phi (rad)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_trailing_phi", 100,-4,4, "phi (rad)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_mass", 50,75,105, "mass (GeV/c^2)");
+  DrawBranchToHist(inFile, outFile, "ee_SS_nJets", 15,0,15, "# jets / event");
 
 
   make2DhistOS(inFile, outFile); // do2D hist on genmatching
-  //  make2DhistSS(inFile, outFile); // do2D hist on genmatching
+  make2DhistSS(inFile, outFile); // do2D hist on genmatching
   return 0;
 }
