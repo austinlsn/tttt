@@ -10,29 +10,45 @@ void DrawBranchToHist(string inFileName, string outFileName, string branchName,i
   TFile *f = new TFile(inFileName.c_str(), "READ");
   TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
   vector<float> *branch = 0;// initialize branch
+  vector<int> *pdgID1_branch = 0; // get pdgIDs for filtering
+  vector<int> *pdgID2_branch = 0;
 
   // Link branch variable address with Tree's branch
   SkimTree->SetBranchAddress(branchName.c_str(), &branch);
+  SkimTree->SetBranchAddress("ee_leadingPdgId", &pdgID1_branch);
+  SkimTree->SetBranchAddress("ee_trailingPdgId", &pdgID2_branch);
   
-  TH1F *hist = new TH1F(branchName.c_str(), branchName.c_str(), nbins, xMin, xMax);
-  gROOT->SetStyle("Plain");
-  gStyle->SetOptStat(111111);
+  std::string strhistOS = "OS_" + branchName;
+  std::string strhistSS = "SS_" + branchName;
+  TH1F *histOS = new TH1F(strhistOS.c_str(), strhistOS.c_str(), nbins, xMin, xMax);
+  TH1F *histSS = new TH1F(strhistSS.c_str(), strhistSS.c_str(), nbins, xMin, xMax);
+
   // loop to fill hist w/ branch's values
   for (unsigned int i = 0; i < SkimTree->GetEntries(); i++) {
     SkimTree->GetEntry(i);
     
     for (unsigned int j = 0; j < branch->size(); j++) {
-      hist->Fill((*branch)[j]);
+      if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] < 0) {
+	histOS->Fill((*branch)[j]);
+      }
+      if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] > 0) {
+	histSS->Fill((*branch)[j]);
+      }
     }// end for j
   }// end for i
   
-  // draw hist and write to output file:
-  hist->Draw();
-  hist->GetXaxis()->SetTitle(XaxisTitle.c_str());
+  // draw histOS and write to output file:
+  histOS->Draw();
+  histOS->GetXaxis()->SetTitle(XaxisTitle.c_str());
+  histSS->Draw();
+  histSS->GetXaxis()->SetTitle(XaxisTitle.c_str());
+
   // Create output file
-  TFile *outFile = new TFile(outFileName.c_str(), "RECREATE");
-  //  outFile->Delete(Form("%s;*",branchName.c_str())); // Delete any existing histograms with the same name
-  hist->Write();
+  TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
+  outFile->Delete(Form("%s;*",strhistOS.c_str())); // Delete any existing hists with the same name
+  outFile->Delete(Form("%s;*",strhistSS.c_str())); // Delete any existing hists with the same name
+  histOS->Write();
+  histSS->Write();
   outFile->Close();
 } // end DrawBranchToHist
 
@@ -80,8 +96,9 @@ void make2Dhists(string inFileName, string outFileName) {
   histSS->SetMarkerSize(1.8);
   histSS->Draw("TEXT");
   // Create output file
-  TFile *outFile = new TFile(outFileName.c_str(), "RECREATE");
-  //  outFile->Delete(Form("%s;*","ee_truthMatch")); // Delete any existing histograms with the same name
+  TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
+  outFile->Delete(Form("%s;*","ee_OS_truthMatch")); // Delete any existing histograms with the same name
+  outFile->Delete(Form("%s;*","ee_SS_truthMatch")); // Delete any existing histograms with the same name
   histOS->Write();
   histSS->Write();
   outFile->Close();

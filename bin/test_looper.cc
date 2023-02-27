@@ -300,11 +300,19 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    TString cinput = (input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root") : strinput + "/" + input_files.data()); // CHANGED FROM '/*.root' 
+    //std::vector<TString> cinput = {input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root","/DY_2l_M_50_5.root") : strinput + "/" + input_files.data()}; // CHANGED FROM '/*.root' 
+    
+    vector<TString> files = {};
+    for (int i=1; i<6; i++){	// 5 files rn.
+      TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
+      files.push_back(file);
+    } 
+    vector<TString> cinput = files;
+    
     IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
-    BaseTree* tin = new BaseTree(cinput, "Events", "", (isData ? "" : "Counters"));
+    BaseTree* tin = new BaseTree(cinput, {"Events"}, (isData ? "" : "Counters")); // CHANGED FROM "Events", "" TO {"Events"}
     tin->sampleIdentifier = sid;
     if (!isData){
       if (xsec<0.){
@@ -735,7 +743,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         bool isTight = dilepton->nTightDaughters()==2;
         bool isSF = dilepton->isSF();
         bool is_LowMass = dilepton->m()<12.;
-        bool is_ZClose = std::abs(dilepton->m()-91.2)<15.;
+        bool is_ZClose = std::abs(dilepton->m()-91.2)<15.; 
         bool is_DYClose = is_ZClose || is_LowMass;
 
 	if (isSF && isTight && is_ZClose) {
@@ -858,8 +866,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> ee_##NAME;
           BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
-
+	  int dL_size = 0;
           for (auto const& dilepton:dileptons) {
+	    dL_size++;
+	    if (dL_size == 2) {break;} // for some reason, dileptons sometimes has more than one dilepton per event. Cut these
 	    if (has_dilepton_SS_ZCand_tight) {std::cout << "SS, event number: " << (*ptr_EventNumber) << endl;}
 	    //----------------------------------------//
 	    float pt1 = dilepton->getDaughter_leadingPt()->pt();
@@ -903,11 +913,11 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	    // pretty sure they must both flip, or neither. But just in case, I'll use two separate ifs:
 	    if (!is_genmatched_prompt1) {
 	      genmatch_leadingPdgId = 33;
-	      std::cout << "leading daughter, other: " << (*ptr_EventNumber) << endl;
+	      std::cout << "leading daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 	    if (!is_genmatched_prompt2) {
 	      genmatch_trailingPdgId = 33;
-	      std::cout << "trailing daughter, other: " << (*ptr_EventNumber) << endl;
+	      std::cout << "trailing daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 
 	    n_branched++;
