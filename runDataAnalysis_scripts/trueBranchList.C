@@ -8,7 +8,7 @@ int trueBranchList() {
   TObjArray *branches = tree->GetListOfBranches();
 
   ofstream myfile;
-  myfile.open ("branch_names.txt");
+  myfile.open ("truBranch_names.txt");
 
   TIter next(branches);
   TBranch *branch;

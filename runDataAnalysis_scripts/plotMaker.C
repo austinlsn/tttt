@@ -1,7 +1,5 @@
 // Makes root hists out of test_looper's output .root file. Each lepton vector has 2 entries, which are sorted leading,trailing.
 
-// maybe Electron_tightCharge is the trueBranch I need???
-
 using namespace std;
 
 void DrawBranchToHist(string inFileName, string outFileName, string branchName,int nbins, float xMin, float xMax, string XaxisTitle) {

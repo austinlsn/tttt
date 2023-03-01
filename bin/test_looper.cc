@@ -144,11 +144,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   IVYerr.open(stroutput_err.Data());
   output_csv.open(stroutput_csv);
 
-<<<<<<< HEAD
   output_csv << "Event, nTightEle, nTightMu, hasOS, hasOS_ZCand, hasSS_ZCand, nGenMatchedLeptons, nFlips, nJets, nBJets" << std::endl;
-=======
   output_csv << "Event, nTightEle, nTightMu, hasOS, nJets, nBJets, hasZCand, nGenMatchedLeptons" << std::endl; // Run,Lumi,
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -307,14 +304,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     //std::vector<TString> cinput = {input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root","/DY_2l_M_50_5.root") : strinput + "/" + input_files.data()}; // CHANGED FROM '/*.root' 
     
     vector<TString> files = {};
-<<<<<<< HEAD
-    for (int i=1; i<2; i++){	// 5 files rn.
-=======
     for (int i=1; i<6; i++){	// 5 files rn.
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
       TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
       files.push_back(file);
-    } 
+    }
     vector<TString> cinput = files;
     
     IVYout << "Accessing input files " << cinput << "..." << endl;
@@ -460,15 +453,14 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     for (int ev=0; ev<nEntries; ev++){ 
       if (SampleHelpers::doSignalInterrupt==1) break;
 
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", at beginning of loop" << endl;}
+
       // Event accumulation in chunks:
       // In simulation, events are accumlated if the entry index falls into the range for the requested chunk (if nchunks<=0, all events are included).
       // In data, max(nchunks) = Number of run numbers. Events are split into chunks based on the ordered list of run numbers in the specified data era.
       bool doAccumulate = true;
       unsigned int n_genmatched = 0; // number of genmatched leptons per event for csv output
-<<<<<<< HEAD
       unsigned int n_flips = 0;
-=======
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
 
       if (isData){
         if (eventIndex_begin>0 || eventIndex_end>0) doAccumulate = (
@@ -729,11 +721,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       seltracker.accumulate("Has ==2 tight leptons", wgt); // Has >=2 and <=4 tight leptons
 
       bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 
-<<<<<<< HEAD
 				   && abs(leptons_tight.back()->pdgId())==11); // Added tight electrons only cut 
-=======
-				   && abs(leptons_tight.at(1)->pdgId())==11); // Added tight electrons only cut 
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
+				   
       if (!pass_electrons) continue;
       seltracker.accumulate("has only electrons", wgt);
 
@@ -742,6 +731,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       if (!(pass_pTl1 && pass_pTl2)) continue;
       seltracker.accumulate("Pass ptl1, ptl2 cuts", wgt);
 
+
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before dilepton cuts" << endl;}
 
       /////////DILEPTONS/////////      
       // Construct all possible dilepton pairs (only 1 for DY, here)
@@ -772,7 +763,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("has ZCand dilepton", wgt);
-
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just after dilepton cuts" << endl;}
 
       bool const has_dilepton_SS_ZCand_tight = (dilepton_SS_ZCand_tight!=nullptr);
       bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
@@ -832,6 +823,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       rcd_output.setNamedVal("pass_triggers_dilepton_matched", pass_triggers_dilepton_matched);
       seltracker.accumulate("Pass triggers after matching", wgt*static_cast<double>(pass_triggers_dilepton_matched));
 
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just after passing triggers after matching" << endl;}
 
       /*************************************************/
       /* NO MORE CALLS TO SELECTION BEYOND THIS POINT! */
@@ -860,13 +852,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         rcd_output.setNamedVal<float>("pTmiss", pTmiss);
         rcd_output.setNamedVal<float>("phimiss", phimiss);
 
-<<<<<<< HEAD
 
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before branching" << endl;}
 
-=======
-
-
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
 	// Record SS AND OS electon-electron pairs
 	{
 #define BRANCH_VECTOR_COMMANDS				    \
@@ -924,29 +912,23 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      leadingPdgId   = dilepton->getDaughter_leadingPt()->pdgId();		
 	      genmatch_leadingPdgId = it_genmatch1->second->pdgId();
 	      n_genmatched++;
-<<<<<<< HEAD
 	      if (genmatch_leadingPdgId * leadingPdgId < 0) {n_flips++;}
-=======
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
 	    }
 	    if (is_genmatched_prompt2) {
 	      trailingPdgId  = dilepton->getDaughter_subleadingPt()->pdgId();
 	      genmatch_trailingPdgId = it_genmatch2->second->pdgId();
 	      n_genmatched++;
-<<<<<<< HEAD
 	      if (genmatch_trailingPdgId * trailingPdgId < 0) {n_flips++;}
-=======
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
 	    }
 		
 	    // pretty sure they must both flip, or neither. But just in case, I'll use two separate ifs:
 	    if (!is_genmatched_prompt1) {
 	      genmatch_leadingPdgId = 33;
-	      std::cout << "leading daughter mismatch: " << (*ptr_EventNumber) << endl;
+	      //std::cout << "leading daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 	    if (!is_genmatched_prompt2) {
 	      genmatch_trailingPdgId = 33;
-	      std::cout << "trailing daughter mismatch: " << (*ptr_EventNumber) << endl;
+	      //std::cout << "trailing daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 
 	    n_branched++;
@@ -963,15 +945,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
 #undef BRANCH_VECTOR_COMMANDS
     } 
-<<<<<<< HEAD
 
 
 
-=======
-
-
-
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
     // Record ak4jets
     {
 #define BRANCH_VECTOR_COMMANDS					\
@@ -1035,23 +1011,13 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       n_recorded++;
 
       if (firstOutputEvent) firstOutputEvent = false;
-
-<<<<<<< HEAD
-      if (*ptr_EventNumber == 49216625) {std::cout << "event 49216625, just before output_csv. ";} // one of 48 valid events that were previously getting dropped
       
-
-      
-=======
-
-      if (*ptr_EventNumber == 49216625) {std::cout << "event 49216625, just before output_csv. ";} // one of 48 valid events that were previously getting dropped
-
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
+      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before output_csv" << endl;}
       int EventN = *ptr_EventNumber; // dereference ptr
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
       output_csv << "," << muons_tight.size();	   // NtightMu: 
       output_csv << "," << has_dilepton_OS_ZCand_tight;  // has OS: 
-<<<<<<< HEAD
       output_csv << "," << (has_dilepton_OS_ZCand_tight);
       output_csv << "," << (has_dilepton_SS_ZCand_tight);
       output_csv << "," << (n_genmatched); // number of genmatched leptons in event
@@ -1059,14 +1025,14 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
       
-=======
+
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
       output_csv << "," << (has_dilepton_OS_ZCand_tight || has_dilepton_SS_ZCand_tight); 
       output_csv << "," << (n_genmatched); // number of genmatched leptons in event
-      	      
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
       output_csv << endl;
+
+      if ((*ptr_EventNumber) == 222642183) {break;}
     } // end ev entries loop
 
     IVYout << "Number of events recorded: " << n_recorded << " / " << n_traversed << " / " << nEntries << endl;
