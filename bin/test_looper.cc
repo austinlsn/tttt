@@ -737,7 +737,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // Construct all possible dilepton pairs (only 1 for DY, here)
       // Note that loose leptons are included as well in the 'selected' collection
       // so that dilepton vetos can be done easily next.
-      dileptonHandler.constructDileptons(&muons_selected, &electrons_selected);
+      dileptonHandler.constructDileptons(&muons_tight, &electrons_tight);
       auto const& dileptons = dileptonHandler.getProducts();
 
       // Dilepton vetos
