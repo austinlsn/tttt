@@ -303,7 +303,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     //std::vector<TString> cinput = {input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root","/DY_2l_M_50_5.root") : strinput + "/" + input_files.data()}; // CHANGED FROM '/*.root' 
     
     vector<TString> files = {};
-    for (int i=1; i<6; i++){	// 5 files rn.
+    for (int i=1; i<2; i++){	// 5 files rn.
       TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
       files.push_back(file);
     } 
@@ -718,7 +718,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       seltracker.accumulate("Has ==2 tight leptons", wgt); // Has >=2 and <=4 tight leptons
 
       bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 
-				   && abs(leptons_tight.at(1)->pdgId())==11); // Added tight electrons only cut 
+				   && abs(leptons_tight.back()->pdgId())==11); // Added tight electrons only cut 
       if (!pass_electrons) continue;
       seltracker.accumulate("has only electrons", wgt);
 
