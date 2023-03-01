@@ -39,12 +39,15 @@ def general_filter(inFile, writer, filter_name, filter_column, filter_value):
 def filterCSV():
     input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'   
     input_filename_yash = '/home/users/yash/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'
+    input_filename_1file = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_1file/DY_2l_M_50.csv'
     output_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_filterCSV.csv' 
 
     with open(output_filename, 'w', newline='') as f_out:
         writer = csv.writer(f_out)
-        #filter_by_nFlips(input_filename, writer, 1) # OS w/ flips
+        filter_by_nFlips(input_filename, writer, 1) # OS w/ flips
+        #filter_by_nFlips(input_filename_1file, writer, 1) # OS w/ flips
         general_filter(input_filename, writer, 'SS events', 3, 0)
+        #general_filter(input_filename_1file, writer, 'SS events', 3, 0)
         #general_filter(input_filename_yash, writer, 'SS events Yash', 5, 1)
 
     # # Transpose entire CSV--possibly will break down w/ large dataset
