@@ -145,7 +145,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   output_csv.open(stroutput_csv);
 
   output_csv << "Event, nTightEle, nTightMu, hasOS, hasOS_ZCand, hasSS_ZCand, nGenMatchedLeptons, nFlips, nJets, nBJets" << std::endl;
-  output_csv << "Event, nTightEle, nTightMu, hasOS, nJets, nBJets, hasZCand, nGenMatchedLeptons" << std::endl; // Run,Lumi,
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -745,6 +744,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       bool fail_vetos = false;
       DileptonObject* dilepton_OS_ZCand_tight = nullptr;
       DileptonObject* dilepton_SS_ZCand_tight = nullptr;
+      bool has_dilepton_OS = 0;
       for (auto const& dilepton:dileptons){ // DILEPTON CUTS
         bool isSS = !dilepton->isOS();
         bool isTight = dilepton->nTightDaughters()==2;
@@ -760,6 +760,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	}
 	else {fail_vetos = true; break;} // Only one dilepton per event so the break is fine here.
 
+	if (!isSS) {has_dilepton_OS = 1;}
       }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("has ZCand dilepton", wgt);
@@ -1017,7 +1018,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
       output_csv << "," << muons_tight.size();	   // NtightMu: 
-      output_csv << "," << has_dilepton_OS_ZCand_tight;  // has OS: 
+      output_csv << "," << has_dilepton_OS;  // has OS: 
       output_csv << "," << (has_dilepton_OS_ZCand_tight);
       output_csv << "," << (has_dilepton_SS_ZCand_tight);
       output_csv << "," << (n_genmatched); // number of genmatched leptons in event

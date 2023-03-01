@@ -106,15 +106,10 @@ void make2Dhists(string inFileName, string outFileName) {
 
 int plotMaker() {
   gROOT->SetBatch(kTRUE); // prevent auto-opening of last drawn histogram
-<<<<<<< HEAD
   string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
+  //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_1file/DY_2l_M_50.root";
   string outFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
-  string inFile2 = "/ceph/cms/store/group/tttt2/Skims/230105/2018/DY_2l_M_50/DY_2l_M_50_1.root";
-=======
-  string inFile = "/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
-  string outFile = "/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
-  string inFile2 = "/ceph/cms/store/group/tttt/Skims/230105/2018/DY_2l_M_50/DY_2l_M_50_1.root";
->>>>>>> 0669f2c310789f84b716d7cb448471242f3dd092
+  //string inFile2 = "/ceph/cms/store/group/tttt2/Skims/230105/2018/DY_2l_M_50/DY_2l_M_50_1.root";
 
   DrawBranchToHist(inFile, outFile, "ee_pt", 50,0,200, "pT (GeV/c)");
   DrawBranchToHist(inFile, outFile, "ee_leadingPt", 50,0,200, "pT (GeV/c)");
