@@ -26,5 +26,5 @@ def compareCSVs(file1, file2):
 
 # Make sure to put the larger csv file first, if applicable.
 compareCSVs('/home/users/yash/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'
-            ,'/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/DY_2l_M_50_2rootFilesBackup_02-126.csv')
+            ,'/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_5files/DY_2l_M_50.csv')
 #'/home/users/aolson/tttt/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'

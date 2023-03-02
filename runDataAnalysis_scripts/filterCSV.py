@@ -26,7 +26,7 @@ def general_filter(inFile, writer, filter_name, filter_column, filter_value):
     filtered_count = 0    # init for counting number of filtered items
     with open(inFile, 'r') as f_in:
         reader = csv.reader(f_in)
-        next(reader)
+        #next(reader)
         for i, row in enumerate(reader):
             if i == 0:          # header row
                 header.append(filter_name)

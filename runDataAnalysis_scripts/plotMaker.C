@@ -50,6 +50,7 @@ void DrawBranchToHist(string inFileName, string outFileName, string branchName,i
   outFile->Close();
 } // end DrawBranchToHist
 
+
 void make2Dhists(string inFileName, string outFileName) {
   // Open input .root file
   TFile *f = new TFile(inFileName.c_str(), "READ");
@@ -103,13 +104,53 @@ void make2Dhists(string inFileName, string outFileName) {
 } // end make2Dhists
 
 
+void make_phiEta_hists(string inFileName, string outFileName) {
+  // input file, branch:
+  TFile *f = new TFile(inFileName.c_str(), "READ");
+  TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
+  // output hist:
+  TH2D *histPhiEta = new TH2D("ee_2DPhiEta", "all leptons eta vs. phi", 9,-4,4, 7,-3,3);
+
+  vector<int> *etaBranchLead = 0;
+  vector<int> *phiBranchLead = 0;
+  vector<int> *etaBranchTrail = 0;
+  vector<int> *phiBranchTrail = 0;
+  SkimTree->SetBranchAddress("ee_leading_eta", &etaBranchLead);
+  SkimTree->SetBranchAddress("ee_leading_phi", &phiBranchLead);
+  SkimTree->SetBranchAddress("ee_trailing_eta", &etaBranchTrail);
+  SkimTree->SetBranchAddress("ee_trailing_phi", &phiBranchTrail);
+
+  // loop to fill hists w/ branch's values
+  for (unsigned int i = 0; i < SkimTree->GetEntries(); i++) {
+    SkimTree->GetEntry(i);
+    
+    for (unsigned int j = 0; j < etaBranchLead->size(); j++) {
+      histPhiEta->Fill((*phiBranchLead)[j],(*etaBranchLead)[j]);
+    } // end for j
+    for (unsigned int j = 0; j < etaBranchTrail->size(); j++) {
+      histPhiEta->Fill((*phiBranchTrail)[j],(*etaBranchTrail)[j]);
+    } // end for j
+  }   // end for i
+
+  // draw hists and write to output file:
+  histPhiEta->GetXaxis()->SetTitle("Phi (rad)");
+  histPhiEta->GetYaxis()->SetTitle("Eta (rad)");
+  histPhiEta->SetMarkerSize(1.8);
+  histPhiEta->Draw("COL");
+  // Create output file:
+  TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
+  outFile->Delete(Form("%s;*","ee_2DPhiEta")); // Delete any existing histograms with the same name
+  histPhiEta->Write();
+  outFile->Close();
+} // end make_phiEta_hists
+
 
 int plotMaker() {
   gROOT->SetBatch(kTRUE); // prevent auto-opening of last drawn histogram
-  string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
-  //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_1file/DY_2l_M_50.root";
+  //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
+  string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_5files/DY_2l_M_50.root";
   string outFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
-  //string inFile2 = "/ceph/cms/store/group/tttt2/Skims/230105/2018/DY_2l_M_50/DY_2l_M_50_1.root";
+
 
   DrawBranchToHist(inFile, outFile, "ee_pt", 50,0,200, "pT (GeV/c)");
   DrawBranchToHist(inFile, outFile, "ee_leadingPt", 50,0,200, "pT (GeV/c)");
@@ -122,5 +163,6 @@ int plotMaker() {
   DrawBranchToHist(inFile, outFile, "ee_nJets", 15,0,15, "# jets / event");
 
   make2Dhists(inFile, outFile);
+  make_phiEta_hists(inFile, outFile);
   return 0;
 }

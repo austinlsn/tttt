@@ -634,10 +634,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       HelperFunctions::appendVector(electrons_selected, electrons_fakeable);
       HelperFunctions::appendVector(electrons_selected, electrons_loose);
 
-      unsigned int const nleptons_tight = muons_tight.size() + electrons_tight.size();
+      unsigned int const nleptons_tight = muons_tight.size() + electrons_tight.size(); 
       unsigned int const nleptons_fakeable = muons_fakeable.size() + electrons_fakeable.size();
       unsigned int const nleptons_loose = muons_loose.size() + electrons_loose.size();
-      unsigned int const nleptons_selected = nleptons_tight + nleptons_fakeable + nleptons_loose;
+      unsigned int const nleptons_selected = nleptons_tight + nleptons_fakeable + nleptons_loose; 
 
       // VECTORS FOR BRANCHES
       std::vector<ParticleObject*> leptons_selected; leptons_selected.reserve(nleptons_selected);
@@ -697,6 +697,20 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // BEGIN PRESELECTION
       seltracker.accumulate("Full sample", wgt);
 
+      bool const pass_Nleptons = (nleptons_tight == 2); // only 2 tight leptons per event
+      if (!pass_Nleptons) continue;
+      seltracker.accumulate("Has 2 tight leptons", wgt);
+
+      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 
+				   && abs(leptons_tight.back()->pdgId())==11); // only electrons in tight leptons
+      if (!pass_electrons) continue;
+      seltracker.accumulate("has only electrons", wgt);
+
+      bool const pass_pTl1 = leptons_tight.front()->pt()>=25.;
+      bool const pass_pTl2 = leptons_tight.at(1)->pt()>=20.;
+      if (!(pass_pTl1 && pass_pTl2)) continue;
+      seltracker.accumulate("Pass ptl1, ptl2 cuts", wgt);
+
       int numJets = ak4jets_tight_recordable.size();
       seltracker.accumulate("nJets before preselections", numJets);
       //bool const pass_Nj_geq_2 = nak4jets_tight_selected>=2;
@@ -707,37 +721,23 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       double const pTmiss = eventmet->pt();
       double const phimiss = eventmet->phi();
 
-      //bool const pass_pTmiss = pTmiss>=minpt_miss;
+      // bool const pass_pTmiss = pTmiss>=minpt_miss;
       // if (!pass_pTmiss) continue;
-      //seltracker.accumulate("Pass pTmiss", wgt);
+      // seltracker.accumulate("Pass pTmiss", wgt);
 
       // bool const pass_HTjets = HT_ak4jets>=minHT_jets;
       // if (!pass_HTjets) continue;
       // seltracker.accumulate("Pass HT (necessary?)", wgt);
 
-      bool const pass_Nleptons = (nleptons_tight == 2); // CHANGED, ONLY 2 leptons   nleptons_tight>=2 && nleptons_tight<5
-      if (!pass_Nleptons) continue;
-      seltracker.accumulate("Has ==2 tight leptons", wgt); // Has >=2 and <=4 tight leptons
-
-      bool const pass_electrons = (abs(leptons_tight.front()->pdgId())==11 
-				   && abs(leptons_tight.back()->pdgId())==11); // Added tight electrons only cut 
-				   
-      if (!pass_electrons) continue;
-      seltracker.accumulate("has only electrons", wgt);
-
-      bool const pass_pTl1 = leptons_tight.front()->pt()>=25.;
-      bool const pass_pTl2 = leptons_tight.at(1)->pt()>=20.;
-      if (!(pass_pTl1 && pass_pTl2)) continue;
-      seltracker.accumulate("Pass ptl1, ptl2 cuts", wgt);
-
 
       if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before dilepton cuts" << endl;}
 
       /////////DILEPTONS/////////      
-      // Construct all possible dilepton pairs (only 1 for DY, here)
-      // Note that loose leptons are included as well in the 'selected' collection
-      // so that dilepton vetos can be done easily next.
-      dileptonHandler.constructDileptons(&muons_tight, &electrons_tight);
+      // Construct all possible dilepton pairs.
+      // Note that loose leptons are not included. Thus there's only 
+      // 1 dilepton (tight) per event so that dilepton vetos can be 
+      // done easily.
+      dileptonHandler.constructDileptons(&muons_tight, &electrons_tight); // tight only
       auto const& dileptons = dileptonHandler.getProducts();
 
       // Dilepton vetos
@@ -753,14 +753,15 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         bool is_ZClose = std::abs(dilepton->m()-91.2)<15.; 
         bool is_DYClose = is_ZClose || is_LowMass;
 
+	if (!isSS) {has_dilepton_OS = 1;} // "has OS pair" for csv output
+
 	if (isSF && isTight && is_ZClose) {
 	  if (isSS && !dilepton_SS_ZCand_tight) {dilepton_SS_ZCand_tight = dilepton;} // marking Z Boson candidates SS
 	  if (!isSS && !dilepton_OS_ZCand_tight) {dilepton_OS_ZCand_tight = dilepton;} // marking Z Boson candidates OS
 	  //else {break;}		// don't veto
 	}
-	else {fail_vetos = true; break;} // Only one dilepton per event so the break is fine here.
+	else {fail_vetos = true; break;} // Only one tight dilepton per event so the break and fail_vetos is okay here.
 
-	if (!isSS) {has_dilepton_OS = 1;}
       }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("has ZCand dilepton", wgt);
@@ -1033,7 +1034,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << "," << (n_genmatched); // number of genmatched leptons in event
       output_csv << endl;
 
-      if ((*ptr_EventNumber) == 222642183) {break;}
     } // end ev entries loop
 
     IVYout << "Number of events recorded: " << n_recorded << " / " << n_traversed << " / " << nEntries << endl;
