@@ -302,7 +302,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
     
     vector<TString> files = {};
-    for (int i=6; i<11; i++){	// 5 files rn.
+    for (int i=1; i<11; i++){	// 10 files rn.
       TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
       files.push_back(file);
     }
@@ -861,9 +861,15 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
 	// Record SS AND OS electon-electron pairs
 	{
-#define BRANCH_VECTOR_COMMANDS				    \
-	  BRANCH_VECTOR_COMMAND(int, genmatch_leadingPdgId) \
-	  BRANCH_VECTOR_COMMAND(int, genmatch_trailingPdgId)\
+#define BRANCH_VECTOR_COMMANDS				     \
+	  BRANCH_VECTOR_COMMAND(int, genmatch_leadingPdgId)  \
+	  BRANCH_VECTOR_COMMAND(int, genmatch_trailingPdgId) \
+	  BRANCH_VECTOR_COMMAND(float, genmatch_leadingPt)   \
+	  BRANCH_VECTOR_COMMAND(float, genmatch_trailingPt)  \
+	  BRANCH_VECTOR_COMMAND(float, genmatch_leading_eta) \
+	  BRANCH_VECTOR_COMMAND(float, genmatch_trailing_eta)\
+	  BRANCH_VECTOR_COMMAND(int, genmatch_leading_mom_PdgId)\
+	  BRANCH_VECTOR_COMMAND(int, genmatch_trailing_mom_PdgId)\
 	  BRANCH_VECTOR_COMMAND(float, pt)	        \
 	  BRANCH_VECTOR_COMMAND(float, leadingPt)	\
 	  BRANCH_VECTOR_COMMAND(float, trailingPt)	\
@@ -934,6 +940,25 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      IVYout << "first particle pdgID (reco) " << leadingPdgId << " matched to (gen) " << genmatch_leadingPdgId << endl;
 	      IVYout << "second particle pdgID (reco) " << trailingPdgId << " matched to (gen) " << genmatch_trailingPdgId << endl;
 	    }
+
+
+	    float genmatch_leadingPt;
+	    float genmatch_trailingPt;
+	    float genmatch_leading_eta;
+	    float genmatch_trailing_eta;
+	    int genmatch_leading_mom_PdgId;
+	    int genmatch_trailing_mom_PdgId;
+	    if (is_genmatched_prompt1) {
+	      genmatch_leadingPt = it_genmatch1->second->pt();
+	      genmatch_leading_eta = it_genmatch1->second->eta();
+	      genmatch_leading_mom_PdgId = it_genmatch1->second->getMother(0)->pdgId();
+	    }
+	    if (is_genmatched_prompt2) {
+	      genmatch_trailingPt = it_genmatch2->second->pt();
+	      genmatch_trailing_eta = it_genmatch2->second->eta();
+	      genmatch_trailing_mom_PdgId = it_genmatch2->second->getMother(0)->pdgId();
+	    }
+
 	    n_branched++;
 	    //-- END GEN MATCHING --//		
 	    //----------------------------------------//	
