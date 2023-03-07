@@ -2,12 +2,12 @@
 
 using namespace std;
 
-void DrawBranchToHist(string inFileName, string outFileName, string branchName,int nbins, float xMin, float xMax, string XaxisTitle) {
+void make1D_hists(string inFileName, string outFileName, string branchName,int nbins, double xMin, double xMax, string XaxisTitle) {
 
   // Open input .root file
   TFile *f = new TFile(inFileName.c_str(), "READ");
   TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
-  vector<float> *branch = 0;// initialize branch
+  vector<double> *branch = 0;// initialize branch
   vector<int> *pdgID1_branch = 0; // get pdgIDs for filtering
   vector<int> *pdgID2_branch = 0;
 
@@ -46,7 +46,7 @@ void DrawBranchToHist(string inFileName, string outFileName, string branchName,i
   histOS->Write();
   histSS->Write();
   outFile->Close();
-} // end DrawBranchToHist
+} // end make1D_hists
 
 
 void canvasKinematicHists(string inFileName, string outFileName, 
@@ -56,8 +56,8 @@ void canvasKinematicHists(string inFileName, string outFileName,
   // Open input .root file
   TFile *f = new TFile(inFileName.c_str(), "READ");
   TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
-  vector<float> *branch_lead      = 0; // initialize input leadingPt branch
-  vector<float> *branch_trail     = 0; // initialize input trailingPt branch
+  vector<double> *branch_lead      = 0; // initialize input leadingPt branch
+  vector<double> *branch_trail     = 0; // initialize input trailingPt branch
   vector<int> *pdgID_branch1      = 0; // get pdgIDs for filtering
   vector<int> *pdgID_branch2      = 0;
   vector<int> *genMatchID_branch1 = 0; // get genMatch pdgIDs for filtering
@@ -77,7 +77,7 @@ void canvasKinematicHists(string inFileName, string outFileName,
   std::string strhistSS_trail = "SS_" + branchName_trail;
   std::string strcanvSS = strhistSS_general + ", 2 genmatches and 1 genmatch";
 
-  TCanvas* c1 = new TCanvas("c1", strcanvSS.c_str(), 1200,600);
+  TCanvas* c1 = new TCanvas("ee_kinematics_OSvsSS", strcanvSS.c_str(), 1200,600);
   std::string strhistSS_2M = strhistSS_general + "_2gM";
   std::string strhistSS_1M = strhistSS_general + "_1gM";
   TH1F *histSS_2M = new TH1F(strhistSS_2M.c_str(), 
@@ -117,22 +117,15 @@ void canvasKinematicHists(string inFileName, string outFileName,
 
   // Create output file and write hists:
   TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
-  outFile->Delete(Form("%s;*",strhistSS_2M.c_str())); // Delete any existing hists with the same name
-  outFile->Delete(Form("%s;*",strhistSS_1M.c_str())); // Delete any existing hists with the same name
-  outFile->Delete(Form("%s;*","c1"));
+  outFile->Delete(Form("%s;*","ee_kinematics_OSvsSS"));
 
-  histSS_2M->Write();
-  histSS_1M->Write();
   c1->Write();
   outFile->Close();
-} // end DrawBranchToHist
+} // end canvasKinematicsHists
 
 
 
-void make2Dhists(string inFileName, string outFileName) {
-
-  int OS_counter = 0;
-  int SS_counter = 0;
+void makeTruthMatchHists(string inFileName, string outFileName) {
 
   // Open input .root file
   TFile *f = new TFile(inFileName.c_str(), "READ");
@@ -158,12 +151,10 @@ void make2Dhists(string inFileName, string outFileName) {
     
     for (unsigned int j = 0; j < genMatch_branch1->size(); j++) {
       if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] < 0) { // filter OS
-	OS_counter++;
 	histOS->Fill((*pdgID1_branch)[j],(*genMatch_branch1)[j]);
 	histOS->Fill((*pdgID2_branch)[j],(*genMatch_branch2)[j]);
       }
       if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] > 0) { // filter SS
-	SS_counter++;
 	histSS->Fill((*pdgID1_branch)[j],(*genMatch_branch1)[j]);
 	histSS->Fill((*pdgID2_branch)[j],(*genMatch_branch2)[j]);
       }
@@ -184,10 +175,8 @@ void make2Dhists(string inFileName, string outFileName) {
   histSS->Write();
   outFile->Close();
 
-  std::cout << 	OS_counter << endl;
-  std::cout << 	SS_counter << endl;
 
-} // end make2Dhists
+} // end makeTruthMatchHists
 
 
 void make_phiEta_hists(string inFileName, string outFileName) {
@@ -195,7 +184,7 @@ void make_phiEta_hists(string inFileName, string outFileName) {
   TFile *f = new TFile(inFileName.c_str(), "READ");
   TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
   // output hist:
-  TH2D *histPhiEta = new TH2D("ee_2DPhiEta", "all leptons eta vs. phi", 9,-4,4, 7,-3,3);
+  TH2D *histPhiEta = new TH2D("ee_2DPhiEta", "all leptons eta vs. phi", 40,-4,4, 40,-3,3);
 
   vector<double> *etaBranchLead = 0;
   vector<double> *phiBranchLead = 0;
@@ -220,7 +209,7 @@ void make_phiEta_hists(string inFileName, string outFileName) {
 
   // draw hists and write to output file:
   histPhiEta->GetXaxis()->SetTitle("Phi (rad)");
-  histPhiEta->GetYaxis()->SetTitle("Eta (rad)");
+  histPhiEta->GetYaxis()->SetTitle("Eta");
   // Create output file:
   TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
   outFile->Delete(Form("%s;*","ee_2DPhiEta")); // Delete any existing histograms with the same name
@@ -230,7 +219,7 @@ void make_phiEta_hists(string inFileName, string outFileName) {
 } // end make_phiEta_hists
 
 
-void make_ptEta_hists(string inFileName, string outFileName) {
+void make_flipRate_hists(string inFileName, string outFileName) {
   // input file, branch:
   TFile *f = new TFile(inFileName.c_str(), "READ");
   TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
@@ -278,9 +267,9 @@ void make_ptEta_hists(string inFileName, string outFileName) {
 
   // draw hists and write to output file:
   histPtEta_num->GetXaxis()->SetTitle("Pt (GeV/c)");
-  histPtEta_num->GetYaxis()->SetTitle("Eta (rad)");
+  histPtEta_num->GetYaxis()->SetTitle("Eta");
   histPtEta_den->GetXaxis()->SetTitle("Pt (GeV/c)");
-  histPtEta_den->GetYaxis()->SetTitle("Eta (rad)");
+  histPtEta_den->GetYaxis()->SetTitle("Eta");
 
   TH2D* histPtEta_flRate = (TH2D*) histPtEta_num->Clone("ptEta_flipRate");
   histPtEta_flRate->Divide(histPtEta_den);
@@ -297,7 +286,122 @@ void make_ptEta_hists(string inFileName, string outFileName) {
   histPtEta_den->Write();
   histPtEta_flRate->Write();
   outFile->Close();
-} // end make_ptEta_hists
+} // end make_flipRate_hists
+
+
+
+void make1D_SShists(string inFileName, string outFileName, string branchName_lead,string branchName_trail, int nbins, double xMin, double xMax, string XaxisTitle) {
+
+  // Open input .root file
+  TFile *f = new TFile(inFileName.c_str(), "READ");
+  TTree *SkimTree = (TTree*)f->Get("SkimTree"); // Get Tree from inFile
+  vector<double> *branch_lead = 0;// initialize branch
+  vector<double> *branch_trail = 0;// initialize branch
+  SkimTree->SetBranchAddress(branchName_lead.c_str(), &branch_lead);
+  SkimTree->SetBranchAddress(branchName_trail.c_str(), &branch_trail);
+  
+  // This is horrible, I should combine some functions
+  vector<int> *pdgID1_branch = 0;
+  vector<int> *pdgID2_branch = 0;
+  vector<int> *genMatch_branch1 = 0;
+  vector<int> *genMatch_branch2 = 0;
+  SkimTree->SetBranchAddress("ee_genmatch_leadingPdgId", &genMatch_branch1);
+  SkimTree->SetBranchAddress("ee_genmatch_trailingPdgId", &genMatch_branch2);
+  SkimTree->SetBranchAddress("ee_leadingPdgId", &pdgID1_branch);
+  SkimTree->SetBranchAddress("ee_trailingPdgId", &pdgID2_branch);
+
+
+  std::string strhist = branchName_lead.erase(3,7);
+  std::string strhist_matchSS = strhist + "_matchSS";
+  std::string strhist_matchOS = strhist + "_matchOS";
+  std::string strhist_noMatch = strhist + "_noMatch";
+  std::string strcanv = strhist + "_SShists";
+
+  TH1F *hist_matchSS = new TH1F(strhist_matchSS.c_str(), strhist_matchSS.c_str(), nbins, xMin, xMax);
+  TH1F *hist_matchOS = new TH1F(strhist_matchOS.c_str(), strhist_matchOS.c_str(), nbins, xMin, xMax);
+  TH1F *hist_noMatch = new TH1F(strhist_noMatch.c_str(), strhist_noMatch.c_str(), nbins, xMin, xMax);
+
+
+
+  // loop to fill hist w/ branch's values
+  for (unsigned int i = 0; i < SkimTree->GetEntries(); i++) {
+    SkimTree->GetEntry(i);
+    
+    for (unsigned int j = 0; j < branch_lead->size(); j++) {
+      if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] > 0) { // SS
+	// matched to same sign electron:
+	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == 121)
+	  hist_matchSS->Fill(std::abs((*branch_lead)[j]));
+	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == 121)
+	  hist_matchSS->Fill(std::abs((*branch_trail)[j]));
+
+	// matched to opposite sign electron:
+	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == -121)
+	  hist_matchOS->Fill(std::abs((*branch_lead)[j]));
+	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == -121)
+	  hist_matchOS->Fill(std::abs((*branch_trail)[j]));
+
+	// not matched to electron:
+	if (std::abs((*pdgID1_branch)[j] * (*genMatch_branch1)[j]) == 363) 
+	  hist_noMatch->Fill(std::abs((*branch_lead)[j]));
+	if (std::abs((*pdgID2_branch)[j] * (*genMatch_branch2)[j]) == 363)
+	  hist_noMatch->Fill(std::abs((*branch_trail)[j]));
+
+      }	// end SS
+    }// end for j
+  }// end for i
+  
+
+  hist_matchSS->SetLineColor(kRed);
+  hist_matchOS->SetLineColor(kBlue);
+  hist_noMatch->SetLineColor(kGreen);
+  // Create a THStack and add the histograms to it
+  THStack* stack = new THStack("stack", "");
+  stack->Add(hist_matchSS);
+  stack->Add(hist_matchOS);
+  stack->Add(hist_noMatch);
+
+
+  // Get the total number of entries in the THStack
+  double total_entries = hist_matchSS->GetEntries() + hist_matchOS->GetEntries() + hist_noMatch->GetEntries();
+
+  // Create a TPaveStats object and set its properties
+  TPaveStats* stats = new TPaveStats(0.8, 0.8, 1.0, 1.0, "brNDC");
+  stats->SetFillColor(0);
+  stats->SetTextAlign(12);
+  stats->SetTextFont(42);
+  stats->SetTextColor(kBlack);
+  stats->SetBorderSize(1);
+  stats->SetOptStat(1111);
+  stats->SetName("stats");
+  // Add the total number of entries to the statbox
+  stats->AddText(Form("Total entries: %.0f", total_entries));
+
+
+  // Create a TLegend and add entries for each histogram
+  TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9);
+  legend->AddEntry(hist_matchSS, "matched to SS", "l");
+  legend->AddEntry(hist_matchOS, "matched to OS", "l");
+  legend->AddEntry(hist_noMatch, "no match", "l");
+
+  // Create a TCanvas and draw the THStack and TLegend
+  TCanvas* c1 = new TCanvas(strcanv.c_str(),strcanv.c_str(),800,600);
+  stack->Draw("nostack"); // Draw the THStack without stacking the histograms 
+  legend->Draw(); // Draw the TLegend
+  stats->Draw();
+
+  // Create output file
+  TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
+  // Delete any existing canvas with the same name:
+  outFile->Delete(Form("%s;*",strcanv.c_str()));
+  
+  c1->Write();
+  hist_matchSS->Write();
+  hist_matchOS->Write();
+  hist_noMatch->Write();
+  outFile->Close();
+} // end make1D_SShists
+
 
 
 
@@ -309,22 +413,26 @@ int plotMaker() {
   string outFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
 
 
-  DrawBranchToHist(inFile, outFile, "ee_pt", 50,0,200, "pT (GeV/c)");
-  DrawBranchToHist(inFile, outFile, "ee_leadingPt", 50,0,200, "pT (GeV/c)");
-  DrawBranchToHist(inFile, outFile, "ee_trailingPt", 50,0,200, "pT (GeV/c)");
-  DrawBranchToHist(inFile, outFile, "ee_leading_eta", 50,-3,3, "eta");
-  DrawBranchToHist(inFile, outFile, "ee_trailing_eta", 50,-3,3, "eta");
-  //DrawBranchToHist(inFile, outFile, "ee_leading_phi", 100,-4,4, "phi (rad)");
-  //DrawBranchToHist(inFile, outFile, "ee_trailing_phi", 100,-4,4, "phi (rad)");
-  DrawBranchToHist(inFile, outFile, "ee_mass", 80,0,125, "mass (GeV/c^2)");
-  DrawBranchToHist(inFile, outFile, "ee_nJets", 15,0,15, "# jets / event");
+  make1D_hists(inFile, outFile, "ee_pt", 50,0,200, "pT (GeV/c)");
+  make1D_hists(inFile, outFile, "ee_leadingPt", 50,0,200, "pT (GeV/c)");
+  make1D_hists(inFile, outFile, "ee_trailingPt", 50,0,200, "pT (GeV/c)");
+  make1D_hists(inFile, outFile, "ee_leading_eta", 50,-3,3, "eta");
+  make1D_hists(inFile, outFile, "ee_trailing_eta", 50,-3,3, "eta");
+  //make1D_hists(inFile, outFile, "ee_leading_phi", 100,-4,4, "phi (rad)");
+  //make1D_hists(inFile, outFile, "ee_trailing_phi", 100,-4,4, "phi (rad)");
+  make1D_hists(inFile, outFile, "ee_mass", 80,0,125, "mass (GeV/c^2)");
+  make1D_hists(inFile, outFile, "ee_nJets", 15,0,15, "# jets / event");
 
   canvasKinematicHists(inFile,outFile, "ee_leadingPt","ee_trailingPt", 50,0,200, "pT (GeV/c)");
   //canvasKinematicHists(inFile,outFile, "ee_leading_eta","ee_trailing_eta", 50,-3,3, "eta");
   //canvasKinematicHists(inFile,outFile, "ee_leading_phi","ee_trailing_phi", 100,-4,4, "phi (rad)");
 
-  make2Dhists(inFile, outFile);
-  make_phiEta_hists(inFile, outFile);
-  make_ptEta_hists(inFile, outFile);
+  make1D_SShists(inFile, outFile, "ee_leadingPt","ee_trailingPt", 50,0,200, "pT (GeV/c)");
+  make1D_SShists(inFile, outFile, "ee_leading_eta","ee_trailing_eta", 20,0,3, "eta");
+
+
+  makeTruthMatchHists(inFile, outFile);
+  make_flipRate_hists(inFile, outFile);
+  make_flipRate_hists(inFile, outFile);
   return 0;
 }
