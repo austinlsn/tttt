@@ -1,23 +1,24 @@
 import csv
 
 def filter_by_nFlips(inFile, writer, filter_value): 
+    nGM_column     = 6    # column ... nGenMatched leptons
     nFlips_column  = 7    # column which contains nFlips
     hasOS_column   = 3    # column which contains has_OS
     header         = []   # initialize an empty header
     filtered_count = 0    # init for counting number of filtered items
     with open(inFile, 'r') as f_in:
         reader = csv.reader(f_in)
-        next(reader)
         for i, row in enumerate(reader):
             if i == 0:          # header row
                 header = []
-                header.append('OS events with flips')
+                header.append('OS events with flips, number of genmatched leptons')
                 writer.writerow(header)
             else:               # filter
                 if (int(row[nFlips_column]) >= filter_value 
                     and int(row[hasOS_column]) == 1): 
-                    writer.writerow([row[0]])
+                    writer.writerow([row[0], row[nGM_column]])
                     filtered_count += 1
+
         writer.writerow(['total number of OS events with ' + str(filter_value) + ' flips: ' + str(filtered_count)])
         writer.writerow("")
 
@@ -47,10 +48,12 @@ def filterCSV():
 
     with open(output_filename, 'w', newline='') as f_out:
         writer = csv.writer(f_out)
-        filter_by_nFlips(input_filename, writer, 2) # OS w/ flips
-        filter_by_nFlips(input_filename, writer, 1) # OS w/ flips
+        filter_by_nFlips(input_filename, writer, 2) # OS w/ 2 flips
+        filter_by_nFlips(input_filename, writer, 1) # OS w/ 1 flip
         general_filter(input_filename, writer, 'SS events', 3, 0)
         general_filter(input_filename, writer, 'OS events', 3, 1)
+        general_filter(input_filename, writer, '1 Gen match', 6, 1)
+        general_filter(input_filename, writer, '2 Gen match', 6, 2)
         #general_filter(input_filename_yash, writer, 'SS events Yash', 5, 1)
 
     # # Transpose entire CSV--possibly will break down w/ large dataset

@@ -300,10 +300,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    //std::vector<TString> cinput = {input_files=="" ? strinput + ("/DY_2l_M_50_1.root","/DY_2l_M_50_2.root","/DY_2l_M_50_3.root","/DY_2l_M_50_4.root","/DY_2l_M_50_5.root") : strinput + "/" + input_files.data()}; // CHANGED FROM '/*.root' 
     
     vector<TString> files = {};
-    for (int i=1; i<6; i++){	// 5 files rn.
+    for (int i=6; i<11; i++){	// 5 files rn.
       TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
       files.push_back(file);
     }
@@ -449,10 +448,13 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     unsigned int n_branched = 0;    
     int nEntries = tin->getNEvents(); 
     IVYout << "Looping over " << nEntries << " events from " << tin->sampleIdentifier << "..." << endl;
+
+    vector<int> events_ss_wrong = {388394813,326775309,326762001,378904733,329197036,332589448,493625445,514693114, 520349237,7826670,353050028,330668360,251754859,296911778,332615901}; // Yash's OSflip bug troubleshooting
+
     for (int ev=0; ev<nEntries; ev++){ 
       if (SampleHelpers::doSignalInterrupt==1) break;
 
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", at beginning of loop" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", at beginning of loop" << endl;}
 
       // Event accumulation in chunks:
       // In simulation, events are accumlated if the entry index falls into the range for the requested chunk (if nchunks<=0, all events are included).
@@ -730,7 +732,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // seltracker.accumulate("Pass HT (necessary?)", wgt);
 
 
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before dilepton cuts" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before dilepton cuts" << endl;}
 
       /////////DILEPTONS/////////      
       // Construct all possible dilepton pairs.
@@ -765,7 +767,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("has ZCand dilepton", wgt);
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just after dilepton cuts" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just after dilepton cuts" << endl;}
 
       bool const has_dilepton_SS_ZCand_tight = (dilepton_SS_ZCand_tight!=nullptr);
       bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
@@ -825,7 +827,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       rcd_output.setNamedVal("pass_triggers_dilepton_matched", pass_triggers_dilepton_matched);
       seltracker.accumulate("Pass triggers after matching", wgt*static_cast<double>(pass_triggers_dilepton_matched));
 
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just after passing triggers after matching" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just after passing triggers after matching" << endl;}
 
       /*************************************************/
       /* NO MORE CALLS TO SELECTION BEYOND THIS POINT! */
@@ -855,7 +857,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         rcd_output.setNamedVal<float>("phimiss", phimiss);
 
 
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before branching" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before branching" << endl;}
 
 	// Record SS AND OS electon-electron pairs
 	{
@@ -878,10 +880,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
           BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
 	  int dL_size = 0;
-          for (auto const& dilepton:dileptons) {
+          for (auto const& dilepton:dileptons) {	    
 	    dL_size++;
-	    if (dL_size == 2) {break;} // for some reason, dileptons sometimes has more than one dilepton per event. Cut these
-	    if (has_dilepton_SS_ZCand_tight) {std::cout << "SS, event number: " << (*ptr_EventNumber) << endl;}
+	    if (dL_size == 2) {break;} // For some reason, SS dileptons are duplicated. Cut these.
+	    if (has_dilepton_SS_ZCand_tight) {IVYout << "SS, event number: " << (*ptr_EventNumber) << endl;}
 	    //----------------------------------------//
 	    float pt1 = dilepton->getDaughter_leadingPt()->pt();
 	    float pt2 = dilepton->getDaughter_subleadingPt()->pt();
@@ -897,27 +899,22 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	    float leading_eta  = dilepton->getDaughter_leadingPt()->eta();
 	    float trailing_eta = dilepton->getDaughter_subleadingPt()->eta();
 	    int nJets          = numJets; // no cuts on jets
-
+	    int leadingPdgId  = dilepton->getDaughter_leadingPt()->pdgId();	
+	    int trailingPdgId = dilepton->getDaughter_subleadingPt()->pdgId();
 	    //-- GEN MATCHING --//
-	    int leadingPdgId;
-	    int trailingPdgId;
-	    int genmatch_leadingPdgId;
-	    int genmatch_trailingPdgId;
-
 	    auto it_genmatch1 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_leadingPt()));
-	    bool is_genmatched_prompt1 = it_genmatch1!=lepton_genmatchpart_map.end() && it_genmatch1->second!=nullptr;
 	    auto it_genmatch2 = lepton_genmatchpart_map.find(dynamic_cast<ParticleObject*>(dilepton->getDaughter_subleadingPt()));
+	    bool is_genmatched_prompt1 = it_genmatch1!=lepton_genmatchpart_map.end() && it_genmatch1->second!=nullptr;
 	    bool is_genmatched_prompt2 = it_genmatch2!=lepton_genmatchpart_map.end() && it_genmatch2->second!=nullptr;
 
+	    int genmatch_leadingPdgId;
+	    int genmatch_trailingPdgId;
 	    if (is_genmatched_prompt1) {
-	      if (*ptr_EventNumber == 49216625) {std::cout << "event 49216625, inside genmatch cut. ";}
-	      leadingPdgId   = dilepton->getDaughter_leadingPt()->pdgId();		
 	      genmatch_leadingPdgId = it_genmatch1->second->pdgId();
 	      n_genmatched++;
 	      if (genmatch_leadingPdgId * leadingPdgId < 0) {n_flips++;}
 	    }
 	    if (is_genmatched_prompt2) {
-	      trailingPdgId  = dilepton->getDaughter_subleadingPt()->pdgId();
 	      genmatch_trailingPdgId = it_genmatch2->second->pdgId();
 	      n_genmatched++;
 	      if (genmatch_trailingPdgId * trailingPdgId < 0) {n_flips++;}
@@ -926,20 +923,24 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	    // pretty sure they must both flip, or neither. But just in case, I'll use two separate ifs:
 	    if (!is_genmatched_prompt1) {
 	      genmatch_leadingPdgId = 33;
-	      //std::cout << "leading daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 	    if (!is_genmatched_prompt2) {
 	      genmatch_trailingPdgId = 33;
-	      //std::cout << "trailing daughter mismatch: " << (*ptr_EventNumber) << endl;
 	    }
 
+	    // OS flips printout
+	    if (find(events_ss_wrong.begin(), events_ss_wrong.end(),*ptr_EventNumber) != events_ss_wrong.end()){
+	      IVYout << *ptr_EventNumber << endl;
+	      IVYout << "first particle pdgID (reco) " << leadingPdgId << " matched to (gen) " << genmatch_leadingPdgId << endl;
+	      IVYout << "second particle pdgID (reco) " << trailingPdgId << " matched to (gen) " << genmatch_trailingPdgId << endl;
+	    }
 	    n_branched++;
 	    //-- END GEN MATCHING --//		
 	    //----------------------------------------//	
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) ee_##NAME.push_back(NAME);
 	    BRANCH_VECTOR_COMMANDS;
 #undef BRANCH_VECTOR_COMMAND
-	  } // end for dilepton:dileptons
+	    } // end for dilepton:dileptons
 
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) rcd_output.setNamedVal(Form("ee_%s", #NAME), ee_##NAME);
       BRANCH_VECTOR_COMMANDS;
@@ -1014,7 +1015,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
       if (firstOutputEvent) firstOutputEvent = false;
       
-      if ((*ptr_EventNumber) == 222642183) {std::cout << (*ptr_EventNumber) << ", just before output_csv" << endl;}
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before output_csv" << endl;}
       int EventN = *ptr_EventNumber; // dereference ptr
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
@@ -1027,11 +1028,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
       
-
-      output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
-      output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
-      output_csv << "," << (has_dilepton_OS_ZCand_tight || has_dilepton_SS_ZCand_tight); 
-      output_csv << "," << (n_genmatched); // number of genmatched leptons in event
       output_csv << endl;
 
     } // end ev entries loop
