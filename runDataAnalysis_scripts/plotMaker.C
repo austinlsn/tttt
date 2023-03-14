@@ -373,16 +373,37 @@ void make1D_SShists(string inFileName, string outFileName, string branchName_lea
   hist_matchSS->SetLineColor(kRed);
   hist_matchOS->SetLineColor(kBlue);
   hist_noMatch->SetLineColor(kGreen);
-
+  
   TCanvas* c1 = new TCanvas(strcanv.c_str(),strcanv.c_str(),800,600);
   // Create output file
   TFile *outFile = new TFile(outFileName.c_str(), "UPDATE");
   // Delete any existing canvas with the same name:
   outFile->Delete(Form("%s;*",strcanv.c_str()));
 
-  hist_matchOS->Draw();  	// plot this first, it's largest
-  hist_matchSS->Draw("SAME");
-  hist_noMatch->Draw("SAME");
+  TLegend *legend = new TLegend(0.7,0.7,.9,.9);
+  legend->AddEntry(hist_matchSS, "matched to SS", "l");
+  legend->AddEntry(hist_matchOS, "matched to OS", "l");
+  legend->AddEntry(hist_noMatch, "matched to nothing", "l");
+
+
+  float max_bin_content = std::max({hist_matchSS->GetMaximum(), hist_matchOS->GetMaximum(), hist_noMatch->GetMaximum()});
+
+  // Sort the histograms based on their maximum bin content
+  std::vector<TH1F*> hist_list = {hist_matchSS, hist_matchOS, hist_noMatch};
+  std::sort(hist_list.begin(), hist_list.end(),
+            [=](TH1F* h1, TH1F* h2) { return h1->GetMaximum() < h2->GetMaximum(); });
+
+  // Draw the histograms in the sorted order
+  for (auto it = hist_list.rbegin(); it != hist_list.rend(); ++it) {
+    TH1F* hist = *it;
+    if (hist->GetMaximum() == max_bin_content) {
+      hist->Draw();
+    } else {
+      hist->Draw("same");
+    }
+  }
+
+  legend->Draw();
   c1->Write();
   outFile->Close();
 } // end make1D_SShists
@@ -517,9 +538,10 @@ int plotMaker() {
   make1D_SShists(inFile, outFile, "ee_leading_eta","ee_trailing_eta", 20,0,3, "eta");
   make1D_SShists(inFile, outFile, "ee_genmatch_leadingPt","ee_genmatch_trailingPt", 50,0,200, "pT (GeV/c)");
   make1D_SShists(inFile, outFile, "ee_genmatch_leading_eta","ee_genmatch_trailing_eta", 20,0,3, "eta");
-  make1D_SShists(inFile, outFile, "ee_leading_dxy","ee_trailing_dxy", 20,-5,5, "dxy");
-  make1D_SShists(inFile, outFile, "ee_leading_dz","ee_trailing_dz", 20,-5,5, "dz");
-  make1D_SShists(inFile, outFile, "ee_leading_iso","ee_trailing_iso", 20,-5,5, "iso");
+  make1D_SShists(inFile, outFile, "ee_leading_dxy","ee_trailing_dxy", 20,0,0.05, "dxy");
+  make1D_SShists(inFile, outFile, "ee_leading_dz","ee_trailing_dz", 20,0,0.1, "dz");
+  make1D_SShists(inFile, outFile, "ee_leading_iso","ee_trailing_iso", 20,0,0.1, "iso");
+  make1D_SShists(inFile, outFile, "ee_leading_dR","ee_trailing_dR", 20,0,0.02, "dR");
 
   //make1D_SShists(inFile, outFile, "ee_genmatch_leading_mom_PdgId","ee_genmatch_trailing_mom_PdgId",38,-12,25, "pdgId");
 
