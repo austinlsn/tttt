@@ -144,7 +144,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   IVYerr.open(stroutput_err.Data());
   output_csv.open(stroutput_csv);
 
-  output_csv << "Event, nTightEle, nTightMu, hasOS, hasOS_ZCand, hasSS_ZCand, nGenMatchedLeptons, nFlips, nJets, nBJets" << std::endl;
+  output_csv << "Event,nTightEle,nTightMu,hasOS,hasOS_ZCand,hasSS_ZCand,nGenMatchedLeptons,nFlips,nJets,nBJets,leadingtightCharge,trailing tightCharge,leading mother,trailing mother" << std::endl;
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -307,7 +307,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       files.push_back(file);
     }
     vector<TString> cinput = files;
-    
+    //std::transform(cinput.begin(), cinput.end(), std::back_inserter(fileNames), [](const TString& tString) { return std::string(tString.Data()); }); // converts vector of TStrings to vector of strings. Causes crash?
+
     IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
@@ -401,7 +402,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   int eventIndex_tracker = 0;
   splitInputEventsIntoChunks((is_sim_data_flag==1), nevents_total, ichunk, nchunks, eventIndex_begin, eventIndex_end);
 
-  for (auto const& tin:tinlist){
+  int fileN = 0;
+  for (auto const& tin:tinlist){ // loop through files' trees
+    fileN++;
+    IVYout << "Running on file " << fileN << endl;
     if (SampleHelpers::doSignalInterrupt==1) break;
 
     auto const& norm_scale = tin_normScale_map.find(tin)->second;
@@ -445,13 +449,17 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
     unsigned int n_traversed = 0;
     unsigned int n_recorded = 0;
-    unsigned int n_branched = 0;    
+    unsigned int n_branched = 0; // for CSV output
+    int out_leading_tightCharge = 0; // for CSV output
+    int out_trailing_tightCharge = 0; // for CSV output
+    int leading_mom_PdgId = 0;	 // for CSV output
+    int trailing_mom_PdgId = 0;	 // for CSV output
     int nEntries = tin->getNEvents(); 
     IVYout << "Looping over " << nEntries << " events from " << tin->sampleIdentifier << "..." << endl;
 
     vector<int> events_ss_wrong = {388394813,326775309,326762001,378904733,329197036,332589448,493625445,514693114, 520349237,7826670,353050028,330668360,251754859,296911778,332615901}; // Yash's OSflip bug troubleshooting
 
-    for (int ev=0; ev<nEntries; ev++){ 
+    for (int ev=0; ev<nEntries; ev++){ // EVENT LOOP
       if (SampleHelpers::doSignalInterrupt==1) break;
 
       if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", at beginning of loop" << endl;}
@@ -888,10 +896,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	  BRANCH_VECTOR_COMMAND(float, leading_iso)	\
 	  BRANCH_VECTOR_COMMAND(float, trailing_iso)	\
 	  BRANCH_VECTOR_COMMAND(int, nJets)	        \
+	  BRANCH_VECTOR_COMMAND(int, genmatch_leading_mom_PdgId)\
+	  BRANCH_VECTOR_COMMAND(int, genmatch_trailing_mom_PdgId)\
 	  BRANCH_VECTOR_COMMAND(float, mass)
-
-	  //BRANCH_VECTOR_COMMAND(int, genmatch_leading_mom_PdgId)\
-	  //BRANCH_VECTOR_COMMAND(int, genmatch_trailing_mom_PdgId)\
 
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) std::vector<TYPE> ee_##NAME;
           BRANCH_VECTOR_COMMANDS;
@@ -935,61 +942,60 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	    bool is_genmatched_prompt1 = it_genmatch1!=lepton_genmatchpart_map.end() && it_genmatch1->second!=nullptr;
 	    bool is_genmatched_prompt2 = it_genmatch2!=lepton_genmatchpart_map.end() && it_genmatch2->second!=nullptr;
 
-	    int genmatch_leadingPdgId = 0;
-	    int genmatch_trailingPdgId = 0;
+
+	    int genmatch_leadingPdgId       = 33; // no match
+	    int genmatch_trailingPdgId      = 33;
+	    float genmatch_leadingPt        = -1; // no match
+	    float genmatch_trailingPt       = -1;
+	    float genmatch_leading_eta      = -3; // no match
+	    float genmatch_trailing_eta     = -3;
+	    float leading_dR                = -1; // no match
+	    float trailing_dR               = -1;
+	    int genmatch_leading_mom_PdgId  =  0; // orphan
+	    int genmatch_trailing_mom_PdgId =  0;
+
 	    if (is_genmatched_prompt1) {
 	      genmatch_leadingPdgId = it_genmatch1->second->pdgId();
-	      n_genmatched++;
 	      if (genmatch_leadingPdgId * leadingPdgId < 0) {n_flips++;}
-	    }
-	    if (is_genmatched_prompt2) {
-	      genmatch_trailingPdgId = it_genmatch2->second->pdgId();
-	      n_genmatched++;
-	      if (genmatch_trailingPdgId * trailingPdgId < 0) {n_flips++;}
-	    }
-		
-	    // pretty sure they must both flip, or neither. But just in case, I'll use two separate ifs:
-	    if (!is_genmatched_prompt1) {
-	      genmatch_leadingPdgId = 33;
-	    }
-	    if (!is_genmatched_prompt2) {
-	      genmatch_trailingPdgId = 33;
-	    }
-
-	    // OS flips printout
-	    if (find(events_ss_wrong.begin(), events_ss_wrong.end(),*ptr_EventNumber) != events_ss_wrong.end()){
-	      IVYout << *ptr_EventNumber << endl;
-	      IVYout << "first particle pdgID (reco) " << leadingPdgId << " matched to (gen) " << genmatch_leadingPdgId << endl;
-	      IVYout << "second particle pdgID (reco) " << trailingPdgId << " matched to (gen) " << genmatch_trailingPdgId << endl;
-	    }
-
-	    float genmatch_leadingPt = 0;
-	    float genmatch_trailingPt = 0;
-	    float genmatch_leading_eta = 0;
-	    float genmatch_trailing_eta = 0;
-	    float leading_dR = 0;
-	    float trailing_dR = 0;
-	    //int genmatch_leading_mom_PdgId;
-	    //int genmatch_trailing_mom_PdgId;
-
-	    if (is_genmatched_prompt1) {
 	      genmatch_leadingPt = it_genmatch1->second->pt();
 	      genmatch_leading_eta = it_genmatch1->second->eta();
 	      float dPhi1 = leading_phi - it_genmatch1->second->phi();
 	      float dEta1 = leading_eta - it_genmatch1->second->eta();
 	      leading_dR = std::sqrt(std::pow(dPhi1,2) + std::pow(dEta1,2)); // calculating deltaR
-	      //genmatch_leading_mom_PdgId = it_genmatch1->second->getMother(0)->pdgId();
+	      if (it_genmatch1->second->getNMothers() > 0)
+		genmatch_leading_mom_PdgId = it_genmatch1->second->getMother(0)->pdgId(); // else it's an orphan => mom = 0
+
+	      n_genmatched++;	// for CSV output
 	    }
+
 	    if (is_genmatched_prompt2) {
+	      genmatch_trailingPdgId = it_genmatch2->second->pdgId();
+	      if (genmatch_trailingPdgId * trailingPdgId < 0) {n_flips++;}
 	      genmatch_trailingPt = it_genmatch2->second->pt();
 	      genmatch_trailing_eta = it_genmatch2->second->eta();
 	      float dPhi2 = trailing_phi - it_genmatch2->second->phi();
 	      float dEta2 = trailing_eta - it_genmatch2->second->eta();
 	      trailing_dR = std::sqrt(std::pow(dPhi2,2) + std::pow(dEta2,2)); // calculating deltaR
-	      //genmatch_trailing_mom_PdgId = it_genmatch2->second->getMother(0)->pdgId();
+	      if (it_genmatch2->second->getNMothers() > 0)
+		genmatch_trailing_mom_PdgId = it_genmatch2->second->getMother(0)->pdgId(); // else it's an orphan => mom = 0
+
+	      n_genmatched++;	// for CSV output
 	    }
 
+	    // // OS flips printout
+	    // if (find(events_ss_wrong.begin(), events_ss_wrong.end(),*ptr_EventNumber) != events_ss_wrong.end()){
+	    //   IVYout << *ptr_EventNumber << endl;
+	    //   IVYout << "first particle pdgID (reco) " << leadingPdgId << " matched to (gen) " << genmatch_leadingPdgId << endl;
+	    //   IVYout << "second particle pdgID (reco) " << trailingPdgId << " matched to (gen) " << genmatch_trailingPdgId << endl;
+	    // }
+
+	    // Stuff for CSV output:
+	    out_leading_tightCharge = leading_tightCharge;
+	    out_trailing_tightCharge = trailing_tightCharge;
+	    leading_mom_PdgId = genmatch_leading_mom_PdgId;
+	    trailing_mom_PdgId = genmatch_trailing_mom_PdgId;
 	    n_branched++;
+
 	    //-- END GEN MATCHING --//		
 	    //----------------------------------------//	
 #define BRANCH_VECTOR_COMMAND(TYPE, NAME) ee_##NAME.push_back(NAME);
@@ -1069,8 +1075,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       n_recorded++;
 
       if (firstOutputEvent) firstOutputEvent = false;
-      
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before output_csv" << endl;}
+      bool start_output = 0;
+      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before output_csv" << endl; start_output = 1;}
+      // if (start_output == 1) IVYout << (*ptr_EventNumber) << endl;
+
       int EventN = *ptr_EventNumber; // dereference ptr
       output_csv << EventN; // addto csv Event Number: 
       output_csv << "," << electrons_tight.size(); // NtightEle: 
@@ -1082,6 +1090,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       output_csv << "," << (n_flips); // number of flips in genmatched events
       output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
       output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
+      output_csv << "," << out_leading_tightCharge << "," << out_trailing_tightCharge; // tightCharge of leading, trailing
+      output_csv << "," << leading_mom_PdgId << "," << trailing_mom_PdgId; // pdgId of mothers of leading, trailing
       
       output_csv << endl;
 
@@ -1091,7 +1101,8 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     nevents_total_traversed += n_traversed;
     
     IVYout << "Number of events added to branches: " << n_branched << endl;
-  }
+  } // end tin : tinlist
+
   seltracker.print();
 
   if (tout){
