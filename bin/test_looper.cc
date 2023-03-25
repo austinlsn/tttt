@@ -144,7 +144,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   IVYerr.open(stroutput_err.Data());
   output_csv.open(stroutput_csv);
 
-  output_csv << "Event,nTightEle,nTightMu,hasOS,hasOS_ZCand,hasSS_ZCand,nGenMatchedLeptons,nFlips,nJets,nBJets,leadingtightCharge,trailing tightCharge,leading mother,trailing mother" << std::endl;
+  output_csv << "Event,nTightEle,nTightMu,hasOS,hasOS ZCand,hasSS ZCand,nGenMatchedLeptons,nFlips,nJets,nBJets,leadingtightCharge,trailing tightCharge,leading mother,trailing mother" << std::endl;
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -300,19 +300,19 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    
+    //TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data());
+
     vector<TString> files = {};
-    for (int i=1; i<21; i++){	// 20 files rn.
+    for (int i=1; i<20; i++){	// 20 files rn.
       TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
       files.push_back(file);
     }
     vector<TString> cinput = files;
-    //std::transform(cinput.begin(), cinput.end(), std::back_inserter(fileNames), [](const TString& tString) { return std::string(tString.Data()); }); // converts vector of TStrings to vector of strings. Causes crash?
 
     IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
-    BaseTree* tin = new BaseTree(cinput, {"Events"}, (isData ? "" : "Counters")); // CHANGED FROM "Events", "" TO {"Events"}
+    BaseTree* tin = new BaseTree(cinput, {"Events"}, (isData ? "" : "Counters")); // FOR FEWER FILES, CHANGE FROM "Events", "" TO {"Events"}
     tin->sampleIdentifier = sid;
     if (!isData){
       if (xsec<0.){
@@ -1117,7 +1117,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   // Split large files, and add them to the transfer queue from Condor to the target site
   // Does nothing if you are running the program locally because your output is already in the desired location.
   SampleHelpers::splitFileAndAddForTransfer(stroutput);
-  SampleHelpers::splitFileAndAddForTransfer(stroutput_csv);
 
   // Close the output and error log files (and csv file)
   IVYout.close();

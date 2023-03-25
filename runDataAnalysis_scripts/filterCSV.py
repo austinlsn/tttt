@@ -16,7 +16,7 @@ def filter_by_nFlips(inFile, writer, filter_value):
             else:               # filter
                 if (int(row[nFlips_column]) >= filter_value 
                     and int(row[hasOS_column]) == 1): 
-                    writer.writerow([row[0], row[nGM_column]])
+                    #writer.writerow([row[0], row[nGM_column]])
                     filtered_count += 1
 
         writer.writerow(['total number of OS events with ' + str(filter_value) + ' flips: ' + str(filtered_count)])
@@ -34,16 +34,16 @@ def general_filter(inFile, writer, filter_name, filter_column, filter_value):
                 writer.writerow(header)
             else:               # filter
                 if (int(row[filter_column]) == filter_value): 
-                    writer.writerow([row[0]])
+                    #writer.writerow([row[0]])
                     filtered_count += 1
         writer.writerow(['total number of ' + str(filter_name) + ': ' + str(filtered_count)])
         writer.writerow('')
 
 
 def filterCSV():
-    #input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'   
+    input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'   
     input_filename_yash = '/home/users/yash/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'
-    input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_20files/DY_2l_M_50.csv'
+    #input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_20files/DY_2l_M_50.csv'
     output_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_filterCSV.csv' 
 
     with open(output_filename, 'w', newline='') as f_out:

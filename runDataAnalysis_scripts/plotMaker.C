@@ -192,7 +192,6 @@ void makeTruthMatchHists(string inFileName, string outFileName) {
   histSS->Write();
   outFile->Close();
 
-
 } // end makeTruthMatchHists
 
 
@@ -303,11 +302,12 @@ void make_flipRate_hists(string inFileName, string outFileName) {
   histPtEta_den->Write();
   histPtEta_flRate->Write();
   outFile->Close();
+
 } // end make_flipRate_hists
 
 
 
-void make1D_SShists(string inFileName, string outFileName, string branchName_lead,string branchName_trail, int nbins, double xMin, double xMax, string XaxisTitle) {
+void make1D_SShists(string inFileName, string outFileName, string branchName_lead,string branchName_trail, int nbins, double xMin, double xMax, string XaxisTitle, bool use_abs) {
 
   // Open input .root file
   TFile *f = new TFile(inFileName.c_str(), "READ");
@@ -348,22 +348,49 @@ void make1D_SShists(string inFileName, string outFileName, string branchName_lea
     for (unsigned int j = 0; j < branch_lead->size(); j++) {
       if ((*pdgID1_branch)[j] * (*pdgID2_branch)[j] > 0) { // SS
 	// matched to same sign electron:
-	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == 121)
-	  hist_matchSS->Fill(std::abs((*branch_lead)[j]));
-	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == 121)
-	  hist_matchSS->Fill(std::abs((*branch_trail)[j]));
+	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == 121) {
+	  if (use_abs) {
+	    hist_matchSS->Fill(std::abs((*branch_lead)[j]));}
+	  else {
+	    hist_matchSS->Fill((*branch_lead)[j]);}
+	}
+
+	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == 121) {
+	  if (use_abs) {
+	    hist_matchSS->Fill(std::abs((*branch_trail)[j]));}
+	  else {
+	    hist_matchSS->Fill((*branch_trail)[j]);}
+	}
 
 	// matched to opposite sign electron:
-	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == -121)
-	  hist_matchOS->Fill(std::abs((*branch_lead)[j]));
-	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == -121)
-	  hist_matchOS->Fill(std::abs((*branch_trail)[j]));
+	if ((*pdgID1_branch)[j] * (*genMatch_branch1)[j] == -121) {
+	  if (use_abs) {
+	    hist_matchOS->Fill(std::abs((*branch_lead)[j]));}
+	  else {
+	    hist_matchOS->Fill((*branch_lead)[j]);}
+	}
+
+	if ((*pdgID2_branch)[j] * (*genMatch_branch2)[j] == -121) {
+	  if (use_abs) {
+	    hist_matchOS->Fill(std::abs((*branch_trail)[j]));}
+	  else {
+	    hist_matchOS->Fill((*branch_trail)[j]);}
+	}
 
 	// not matched to electron:
-	if (std::abs((*pdgID1_branch)[j] * (*genMatch_branch1)[j]) == 363) 
-	  hist_noMatch->Fill(std::abs((*branch_lead)[j]));
-	if (std::abs((*pdgID2_branch)[j] * (*genMatch_branch2)[j]) == 363)
-	  hist_noMatch->Fill(std::abs((*branch_trail)[j]));
+	if (std::abs((*pdgID1_branch)[j] * (*genMatch_branch1)[j]) == 363) {
+	  if (use_abs) {
+	    hist_noMatch->Fill(std::abs((*branch_lead)[j]));}
+	  else {
+	    hist_noMatch->Fill((*branch_lead)[j]);}
+	}
+
+	if (std::abs((*pdgID2_branch)[j] * (*genMatch_branch2)[j]) == 363) {
+	  if (use_abs) {
+	    hist_noMatch->Fill(std::abs((*branch_trail)[j]));}
+	  else {
+	    hist_noMatch->Fill((*branch_trail)[j]);}
+	}
 
       }	// end SS
     }// end for j
@@ -393,12 +420,14 @@ void make1D_SShists(string inFileName, string outFileName, string branchName_lea
   std::sort(hist_list.begin(), hist_list.end(),
             [=](TH1F* h1, TH1F* h2) { return h1->GetMaximum() < h2->GetMaximum(); });
 
-  // Draw the histograms in the sorted order
+  // Draw the hists in the sorted order:
   for (auto it = hist_list.rbegin(); it != hist_list.rend(); ++it) {
     TH1F* hist = *it;
     if (hist->GetMaximum() == max_bin_content) {
       hist->Draw();
-    } else {
+    }
+    else {
+      hist->SetTitle(strcanv.c_str());
       hist->Draw("same");
     }
   }
@@ -406,6 +435,7 @@ void make1D_SShists(string inFileName, string outFileName, string branchName_lea
   legend->Draw();
   c1->Write();
   outFile->Close();
+
 } // end make1D_SShists
 
 
@@ -516,6 +546,10 @@ int plotMaker() {
   //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_20files/DY_2l_M_50.root";
   string outFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
 
+  // Recreate output file at beginning of script.
+  TFile *output = new TFile(outFile.c_str(), "RECREATE");  
+  delete output;
+
 
   make1D_hists(inFile, outFile, "ee_pt", 50,0,200, "pT (GeV/c)");
   // make1D_hists(inFile, outFile, "ee_leadingPt", 50,0,200, "pT (GeV/c)");
@@ -534,16 +568,16 @@ int plotMaker() {
   //canvasKinematicHists(inFile,outFile, "ee_leading_eta","ee_trailing_eta", 50,-3,3, "eta");
   //canvasKinematicHists(inFile,outFile, "ee_leading_phi","ee_trailing_phi", 100,-4,4, "phi (rad)");
 
-  make1D_SShists(inFile, outFile, "ee_leadingPt","ee_trailingPt", 50,0,200, "pT (GeV/c)");
-  make1D_SShists(inFile, outFile, "ee_leading_eta","ee_trailing_eta", 20,0,3, "eta");
-  make1D_SShists(inFile, outFile, "ee_genmatch_leadingPt","ee_genmatch_trailingPt", 50,0,200, "pT (GeV/c)");
-  make1D_SShists(inFile, outFile, "ee_genmatch_leading_eta","ee_genmatch_trailing_eta", 20,0,3, "eta");
-  make1D_SShists(inFile, outFile, "ee_leading_dxy","ee_trailing_dxy", 20,0,0.05, "dxy");
-  make1D_SShists(inFile, outFile, "ee_leading_dz","ee_trailing_dz", 20,0,0.1, "dz");
-  make1D_SShists(inFile, outFile, "ee_leading_iso","ee_trailing_iso", 20,0,0.1, "iso");
-  make1D_SShists(inFile, outFile, "ee_leading_dR","ee_trailing_dR", 20,0,0.02, "dR");
+  make1D_SShists(inFile, outFile, "ee_leadingPt","ee_trailingPt", 50,0,200, "pT (GeV/c)",0);
+  make1D_SShists(inFile, outFile, "ee_leading_eta","ee_trailing_eta", 20,0,3, "eta",1);
+  make1D_SShists(inFile, outFile, "ee_genmatch_leadingPt","ee_genmatch_trailingPt", 50,0,200, "pT (GeV/c)",0);
+  make1D_SShists(inFile, outFile, "ee_genmatch_leading_eta","ee_genmatch_trailing_eta", 20,0,3, "eta",1);
+  make1D_SShists(inFile, outFile, "ee_leading_dxy","ee_trailing_dxy", 20,0,0.05, "dxy",0);
+  make1D_SShists(inFile, outFile, "ee_leading_dz","ee_trailing_dz", 20,0,0.1, "dz",0);
+  make1D_SShists(inFile, outFile, "ee_leading_iso","ee_trailing_iso", 20,0,0.1, "iso",0);
+  make1D_SShists(inFile, outFile, "ee_leading_dR","ee_trailing_dR", 20,0,0.02, "dR",1);
 
-  make1D_SShists(inFile, outFile, "ee_genmatch_leading_mom_PdgId","ee_genmatch_trailing_mom_PdgId",38,-12,25, "pdgId");
+  make1D_SShists(inFile, outFile, "ee_genmatch_leading_mom_PdgId","ee_genmatch_trailing_mom_PdgId",38,-12,25, "pdgId",0);
 
   make2D_SShists(inFile, outFile, "ee_leadingPt","ee_trailingPt", 6,15,300,"pT (GeV/c)", "ee_leading_eta","ee_trailing_eta", 3,0,2.5,"eta");
 
