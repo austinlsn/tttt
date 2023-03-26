@@ -137,14 +137,14 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   TString stroutput = coutput_main + "/" + output_file.data() + ".root"; // This is the output ROOT file.
   TString stroutput_log = coutput_main + "/log_" + output_file.data() + ".out"; // This is the output log file.
   TString stroutput_err = coutput_main + "/log_" + output_file.data() + ".err"; // This is the error log file.
-  TString stroutput_csv = coutput_main + "/" + output_file.data() + ".csv"; // This is the csv file to be filled with important numbers
-  ofstream output_csv;
+  //TString stroutput_csv = coutput_main + "/" + output_file.data() + ".csv"; // This is the csv file to be filled with important numbers
+  //ofstream output_csv;
   
   IVYout.open(stroutput_log.Data());
   IVYerr.open(stroutput_err.Data());
-  output_csv.open(stroutput_csv);
+  //output_csv.open(stroutput_csv);
 
-  output_csv << "Event,nTightEle,nTightMu,hasOS,hasOS ZCand,hasSS ZCand,nGenMatchedLeptons,nFlips,nJets,nBJets,leadingtightCharge,trailing tightCharge,leading mother,trailing mother" << std::endl;
+  //output_csv << "Event,nTightEle,nTightMu,hasOS,hasOS ZCand,hasSS ZCand,nGenMatchedLeptons,nFlips,nJets,nBJets,leadingtightCharge,trailing tightCharge,leading mother,trailing mother" << std::endl;
 
   // In case the user wants to run on particular files
   std::string input_files;
@@ -300,19 +300,19 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    //TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data());
+    TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data());
 
-    vector<TString> files = {};
-    for (int i=1; i<20; i++){	// 20 files rn.
-      TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
-      files.push_back(file);
-    }
-    vector<TString> cinput = files;
+    // vector<TString> files = {};
+    // for (int i=1; i<21; i++){	// 20 files rn.
+    //   TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
+    //   files.push_back(file);
+    // }
+    // vector<TString> cinput = files;
 
-    IVYout << "Accessing input files " << cinput << "..." << endl;
+    //IVYout << "Accessing input files " << cinput << "..." << endl;
     TString const sid = SampleHelpers::getSampleIdentifier(dset_proc_pair.first);
     bool const isData = SampleHelpers::checkSampleIsData(sid);
-    BaseTree* tin = new BaseTree(cinput, {"Events"}, (isData ? "" : "Counters")); // FOR FEWER FILES, CHANGE FROM "Events", "" TO {"Events"}
+    BaseTree* tin = new BaseTree(cinput, "Events", "", (isData ? "" : "Counters")); // FOR FEWER FILES, CHANGE FROM "Events", "" TO {"Events"}
     tin->sampleIdentifier = sid;
     if (!isData){
       if (xsec<0.){
@@ -469,7 +469,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // In data, max(nchunks) = Number of run numbers. Events are split into chunks based on the ordered list of run numbers in the specified data era.
       bool doAccumulate = true;
       unsigned int n_genmatched = 0; // number of genmatched leptons per event for csv output
-      unsigned int n_flips = 0;
+      unsigned int n_flips = 0;	     // for csv output
 
       if (isData){
         if (eventIndex_begin>0 || eventIndex_end>0) doAccumulate = (
@@ -853,11 +853,11 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         else{
           rcd_output.setNamedVal("RunNumber", *ptr_RunNumber); 
 	  int runN = *ptr_RunNumber; // dereference ptr
-	  output_csv << "Run Number: " << runN; // add to csv  
+	  //output_csv << "Run Number: " << runN; // add to csv  
 
           rcd_output.setNamedVal("LuminosityBlock", *ptr_LuminosityBlock); // LUMI
 	  double LumiVal;
-	  output_csv << ",Lumi: " << LumiVal;
+	  //output_csv << ",Lumi: " << LumiVal;
         }
 
         rcd_output.setNamedVal<float>("HT_ak4jets", HT_ak4jets);
@@ -1080,20 +1080,20 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // if (start_output == 1) IVYout << (*ptr_EventNumber) << endl;
 
       int EventN = *ptr_EventNumber; // dereference ptr
-      output_csv << EventN; // addto csv Event Number: 
-      output_csv << "," << electrons_tight.size(); // NtightEle: 
-      output_csv << "," << muons_tight.size();	   // NtightMu: 
-      output_csv << "," << has_dilepton_OS;  // has OS: 
-      output_csv << "," << (has_dilepton_OS_ZCand_tight);
-      output_csv << "," << (has_dilepton_SS_ZCand_tight);
-      output_csv << "," << (n_genmatched); // number of genmatched leptons in event
-      output_csv << "," << (n_flips); // number of flips in genmatched events
-      output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
-      output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
-      output_csv << "," << out_leading_tightCharge << "," << out_trailing_tightCharge; // tightCharge of leading, trailing
-      output_csv << "," << leading_mom_PdgId << "," << trailing_mom_PdgId; // pdgId of mothers of leading, trailing
+      // output_csv << EventN; // addto csv Event Number: 
+      // output_csv << "," << electrons_tight.size(); // NtightEle: 
+      // output_csv << "," << muons_tight.size();	   // NtightMu: 
+      // output_csv << "," << has_dilepton_OS;  // has OS: 
+      // output_csv << "," << (has_dilepton_OS_ZCand_tight);
+      // output_csv << "," << (has_dilepton_SS_ZCand_tight);
+      // output_csv << "," << (n_genmatched); // number of genmatched leptons in event
+      // output_csv << "," << (n_flips); // number of flips in genmatched events
+      // output_csv << "," << ak4jets_tight_selected.size(); // Njets: 
+      // output_csv << "," << ak4jets_tight_selected_btagged.size(); // Nbjets: 
+      // output_csv << "," << out_leading_tightCharge << "," << out_trailing_tightCharge; // tightCharge of leading, trailing
+      // output_csv << "," << leading_mom_PdgId << "," << trailing_mom_PdgId; // pdgId of mothers of leading, trailing
       
-      output_csv << endl;
+      // output_csv << endl;
 
     } // end ev entries loop
 
@@ -1121,7 +1121,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
   // Close the output and error log files (and csv file)
   IVYout.close();
   IVYerr.close();
-  output_csv.close();
+  //output_csv.close();
 
   return 0;
 } // end ScanChain

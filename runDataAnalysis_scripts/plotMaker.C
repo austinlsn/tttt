@@ -542,8 +542,8 @@ void make2D_SShists(string inFileName, string outFileName, string branchName1_le
 
 int plotMaker() {
   gROOT->SetBatch(kTRUE); // prevent auto-opening of last drawn histogram
-  string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
-  //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_20files/DY_2l_M_50.root";
+  //string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.root";
+  string inFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_fullDataset/DY_2l_M_50.root";
   string outFile = "/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_plotMaker.root";
 
   // Recreate output file at beginning of script.
@@ -556,10 +556,10 @@ int plotMaker() {
   // make1D_hists(inFile, outFile, "ee_trailingPt", 50,0,200, "pT (GeV/c)");
   // make1D_hists(inFile, outFile, "ee_leading_eta", 50,-3,3, "eta");
   // make1D_hists(inFile, outFile, "ee_trailing_eta", 50,-3,3, "eta");
-  make1D_hists(inFile, outFile, "ee_leading_phi", 100,-4,4, "phi (rad)");
+  //make1D_hists(inFile, outFile, "ee_leading_phi", 100,-4,4, "phi (rad)");
   //make1D_hists(inFile, outFile, "ee_trailing_phi", 100,-4,4, "phi (rad)");
   make1D_hists(inFile, outFile, "ee_mass", 80,0,125, "mass (GeV/c^2)");
-  //make1D_hists(inFile, outFile, "ee_nJets", 15,0,15, "# jets / event");
+  make1D_hists(inFile, outFile, "ee_nJets", 15,0,15, "# jets / event");
   make1D_hists(inFile, outFile, "ee_leading_tightCharge", 24,-11,12, "");
   make1D_hists(inFile, outFile, "ee_trailing_tightCharge", 24,-11,12, "");
 
@@ -576,7 +576,6 @@ int plotMaker() {
   make1D_SShists(inFile, outFile, "ee_leading_dz","ee_trailing_dz", 20,0,0.1, "dz",0);
   make1D_SShists(inFile, outFile, "ee_leading_iso","ee_trailing_iso", 20,0,0.1, "iso",0);
   make1D_SShists(inFile, outFile, "ee_leading_dR","ee_trailing_dR", 20,0,0.02, "dR",1);
-
   make1D_SShists(inFile, outFile, "ee_genmatch_leading_mom_PdgId","ee_genmatch_trailing_mom_PdgId",38,-12,25, "pdgId",0);
 
   make2D_SShists(inFile, outFile, "ee_leadingPt","ee_trailingPt", 6,15,300,"pT (GeV/c)", "ee_leading_eta","ee_trailing_eta", 3,0,2.5,"eta");

@@ -1,72 +1,34 @@
-import csv
+# script to filter through output csv and show important values
 
-def filter_by_nFlips(inFile, writer, filter_value): 
-    nGM_column     = 6    # column ... nGenMatched leptons
-    nFlips_column  = 7    # column which contains nFlips
-    hasOS_column   = 3    # column which contains has_OS
-    header         = []   # initialize an empty header
-    filtered_count = 0    # init for counting number of filtered items
-    with open(inFile, 'r') as f_in:
-        reader = csv.reader(f_in)
-        for i, row in enumerate(reader):
-            if i == 0:          # header row
-                header = []
-                header.append('OS events with flips, number of genmatched leptons')
-                writer.writerow(header)
-            else:               # filter
-                if (int(row[nFlips_column]) >= filter_value 
-                    and int(row[hasOS_column]) == 1): 
-                    #writer.writerow([row[0], row[nGM_column]])
-                    filtered_count += 1
-
-        writer.writerow(['total number of OS events with ' + str(filter_value) + ' flips: ' + str(filtered_count)])
-        writer.writerow("")
-
-def general_filter(inFile, writer, filter_name, filter_column, filter_value): 
-    header         = []   # initialize an empty header
-    filtered_count = 0    # init for counting number of filtered items
-    with open(inFile, 'r') as f_in:
-        reader = csv.reader(f_in)
-        #next(reader)
-        for i, row in enumerate(reader):
-            if i == 0:          # header row
-                header.append(filter_name)
-                writer.writerow(header)
-            else:               # filter
-                if (int(row[filter_column]) == filter_value): 
-                    #writer.writerow([row[0]])
-                    filtered_count += 1
-        writer.writerow(['total number of ' + str(filter_name) + ': ' + str(filtered_count)])
-        writer.writerow('')
+# Columns of output csv:
+# Event, has OS, nGenMatched leptons, nFlips, nTightCharge of leading lepton, nTightCharge of trailing lepton, mother of leading lepton's genmatch, mother of trailing lepton's genmatch
 
 
-def filterCSV():
-    input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'   
-    input_filename_yash = '/home/users/yash/CMSSW_10_6_26/src/tttt/test/output/ExampleLooper/DYJetsToLL_M-50/2018/DY_2l_M_50.csv'
-    #input_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/saved_outputs/DY_2l_M_50_20files/DY_2l_M_50.csv'
-    output_filename = '/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_filterCSV.csv' 
+import pandas as pd
 
-    with open(output_filename, 'w', newline='') as f_out:
-        writer = csv.writer(f_out)
-        filter_by_nFlips(input_filename, writer, 2) # OS w/ 2 flips
-        filter_by_nFlips(input_filename, writer, 1) # OS w/ 1 flip
-        general_filter(input_filename, writer, 'SS events', 3, 0)
-        general_filter(input_filename, writer, 'OS events', 3, 1)
-        general_filter(input_filename, writer, '0 Gen match', 6, 0)
-        general_filter(input_filename, writer, '1 Gen match', 6, 1)
-        #general_filter(input_filename, writer, '2 Gen match', 6, 2)
-        #general_filter(input_filename_yash, writer, 'SS events Yash', 5, 1)
+# Load the CSV file into a DataFrame
+df = pd.read_csv('/home/users/aolson/tttt2/CMSSW_10_6_26/src/tttt/runDataAnalysis_scripts/output_csvMaker.csv')
 
-    # # Transpose entire CSV--possibly will break down w/ large dataset
-    # with open(output_filename, 'r') as outFile:
-    #     reader = csv.reader(outFile)
-    #     output_data = [row for row in reader]
-        
-    #     transposed_data = list(map(list, zip(*output_data)))
-
-    # with open(output_filename, 'w', newline='') as outFile:
-    #     writer = csv.writer(outFile)
-    #     writer.writerows(transposed_data)
+# Filter the DataFrame based on OS or SS events
+OSfilter_df = df[df[' has OS'] == 1]
+SSfilter_df = df[df[' has OS'] == 0]
+# Filter by number of genmatches in SS events
+SS_2GMfilter_df = df[(df[' nGenMatched leptons'] == 2) & (df[' has OS'] == 0)]
+SS_1GMfilter_df = df[(df[' nGenMatched leptons'] == 1) & (df[' has OS'] == 0)]
+SS_0GMfilter_df = df[(df[' nGenMatched leptons'] == 0) & (df[' has OS'] == 0)]
 
 
-filterCSV()
+# Get the number of rows in the filtered DataFrame
+num_OSevents = len(OSfilter_df)
+num_SSevents = len(SSfilter_df)
+num_SS_2GMevents = len(SS_2GMfilter_df)
+num_SS_1GMevents = len(SS_1GMfilter_df)
+num_SS_0GMevents = len(SS_0GMfilter_df)
+
+# Print the results
+print('Number of events with ...')
+print(f'OS events: {num_OSevents}')
+print(f'SS events: {num_SSevents}')
+print(f'SS events w/ 2 genmatches: {num_SS_2GMevents}')
+print(f'SS events w/ 1 genmatches: {num_SS_1GMevents}')
+print(f'SS events w/ 0 genmatches: {num_SS_0GMevents}')
