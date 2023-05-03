@@ -295,16 +295,15 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 
   signed char is_sim_data_flag = -1; // =0 for sim, =1 for data
   int nevents_total = 0;
-  unsigned int nevents_total_traversed = 0;
   std::vector<BaseTree*> tinlist; tinlist.reserve(dset_proc_pairs.size());
   std::unordered_map<BaseTree*, double> tin_normScale_map;
   for (auto const& dset_proc_pair:dset_proc_pairs){
     TString strinput = SampleHelpers::getInputDirectory() + "/" + strinputdpdir + "/" + dset_proc_pair.second.data();
-    TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data());
+    TString cinput = (input_files=="" ? strinput + "/*.root" : strinput + "/" + input_files.data()); 
 
     // vector<TString> files = {};
-    // for (int i=1; i<21; i++){	// 20 files rn.
-    //   TString file = (input_files=="" ? strinput + "/DY_2l_M_50_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
+    // for (int i=1; i<3; i++){	// 20 files rn.
+    //   TString file = (input_files=="" ? strinput + "/DoubleEG_2017D_" + to_string(i) + ".root" : strinput + "/" + input_files.data());
     //   files.push_back(file);
     // }
     // vector<TString> cinput = files;
@@ -457,12 +456,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     int nEntries = tin->getNEvents(); 
     IVYout << "Looping over " << nEntries << " events from " << tin->sampleIdentifier << "..." << endl;
 
-    vector<int> events_ss_wrong = {388394813,326775309,326762001,378904733,329197036,332589448,493625445,514693114, 520349237,7826670,353050028,330668360,251754859,296911778,332615901}; // Yash's OSflip bug troubleshooting
-
     for (int ev=0; ev<nEntries; ev++){ // EVENT LOOP
       if (SampleHelpers::doSignalInterrupt==1) break;
 
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", at beginning of loop" << endl;}
 
       // Event accumulation in chunks:
       // In simulation, events are accumlated if the entry index falls into the range for the requested chunk (if nchunks<=0, all events are included).
@@ -563,7 +559,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	leptons.begin(), leptons.end(),
         genmatch_promptleptons.begin(), genmatch_promptleptons.end(),
         lepton_genmatchpart_map
-      );
+      );			// Matching purely by DeltaR > 0.2, it seems
       
 
       // Keep track of leptons
@@ -740,7 +736,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       // seltracker.accumulate("Pass HT (necessary?)", wgt);
 
 
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before dilepton cuts" << endl;}
 
       /////////DILEPTONS/////////      
       // Construct all possible dilepton pairs.
@@ -760,14 +755,14 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         bool isTight = dilepton->nTightDaughters()==2;
         bool isSF = dilepton->isSF();
         bool is_LowMass = dilepton->m()<12.;
-        bool is_ZClose = std::abs(dilepton->m()-91.2)<100.; // was 15.
+        bool is_ZClose = std::abs(dilepton->m()-91.2)<15.; // was 15.
         bool is_DYClose = is_ZClose || is_LowMass;
 
 	if (!isSS) {has_dilepton_OS = 1;} // "has OS pair" for csv output
 
 	if (isSF && isTight && is_ZClose) {
 	  if (isSS && !dilepton_SS_ZCand_tight) {dilepton_SS_ZCand_tight = dilepton;} // marking Z Boson candidates SS
-	  if (!isSS && !dilepton_OS_ZCand_tight) {dilepton_OS_ZCand_tight = dilepton;} // marking Z Boson candidates OS
+	  else if (!isSS && !dilepton_OS_ZCand_tight) {dilepton_OS_ZCand_tight = dilepton;} // marking Z Boson candidates OS
 	  //else {break;}		// don't veto
 	}
 	else {fail_vetos = true; break;} // Only one tight dilepton per event so the break and fail_vetos is okay here.
@@ -775,7 +770,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       }	// end for dilepton:dileptons
       if (fail_vetos) continue;
       seltracker.accumulate("has ZCand dilepton", wgt);
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just after dilepton cuts" << endl;}
 
       bool const has_dilepton_SS_ZCand_tight = (dilepton_SS_ZCand_tight!=nullptr);
       bool const has_dilepton_OS_ZCand_tight = (dilepton_OS_ZCand_tight!=nullptr);
@@ -835,7 +829,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
       rcd_output.setNamedVal("pass_triggers_dilepton_matched", pass_triggers_dilepton_matched);
       seltracker.accumulate("Pass triggers after matching", wgt*static_cast<double>(pass_triggers_dilepton_matched));
 
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just after passing triggers after matching" << endl;}
 
       /*************************************************/
       /* NO MORE CALLS TO SELECTION BEYOND THIS POINT! */
@@ -845,7 +838,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         rcd_output.setNamedVal("event_wgt", static_cast<float>(wgt));
         rcd_output.setNamedVal("EventNumber", *ptr_EventNumber);
 	
-        if (!isData){ // This one is triggered for charge flips
+        if (!isData){
           rcd_output.setNamedVal("GenMET_pt", *ptr_genmet_pt);
           rcd_output.setNamedVal("GenMET_phi", *ptr_genmet_phi);
 
@@ -853,11 +846,9 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         else{
           rcd_output.setNamedVal("RunNumber", *ptr_RunNumber); 
 	  int runN = *ptr_RunNumber; // dereference ptr
-	  //output_csv << "Run Number: " << runN; // add to csv  
 
           rcd_output.setNamedVal("LuminosityBlock", *ptr_LuminosityBlock); // LUMI
 	  double LumiVal;
-	  //output_csv << ",Lumi: " << LumiVal;
         }
 
         rcd_output.setNamedVal<float>("HT_ak4jets", HT_ak4jets);
@@ -865,7 +856,6 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         rcd_output.setNamedVal<float>("phimiss", phimiss);
 
 
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before branching" << endl;}
 
 	// Record SS AND OS electon-electron pairs
 	{
@@ -963,13 +953,13 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      float dEta1 = leading_eta - it_genmatch1->second->eta();
 	      leading_dR = std::sqrt(std::pow(dPhi1,2) + std::pow(dEta1,2)); // calculating deltaR
 	      if (it_genmatch1->second->getNMothers() > 0)
-		genmatch_leading_mom_PdgId = it_genmatch1->second->getMother(0)->pdgId(); // else it's an orphan => mom = 0
+		{genmatch_leading_mom_PdgId = it_genmatch1->second->getMother(0)->pdgId();} // else it's an orphan => mom = 0
 
 	      n_genmatched++;	// for CSV output
 	    }
 
 	    if (is_genmatched_prompt2) {
-	      genmatch_trailingPdgId = it_genmatch2->second->pdgId();
+	      genmatch_trailingPdgId = it_genmatch2->second->pdgId(); // includes other pdgIDs like 22, etc.
 	      if (genmatch_trailingPdgId * trailingPdgId < 0) {n_flips++;}
 	      genmatch_trailingPt = it_genmatch2->second->pt();
 	      genmatch_trailing_eta = it_genmatch2->second->eta();
@@ -977,17 +967,11 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
 	      float dEta2 = trailing_eta - it_genmatch2->second->eta();
 	      trailing_dR = std::sqrt(std::pow(dPhi2,2) + std::pow(dEta2,2)); // calculating deltaR
 	      if (it_genmatch2->second->getNMothers() > 0)
-		genmatch_trailing_mom_PdgId = it_genmatch2->second->getMother(0)->pdgId(); // else it's an orphan => mom = 0
+		{genmatch_trailing_mom_PdgId = it_genmatch2->second->getMother(0)->pdgId();} // else it's an orphan => mom = 0
 
 	      n_genmatched++;	// for CSV output
 	    }
 
-	    // // OS flips printout
-	    // if (find(events_ss_wrong.begin(), events_ss_wrong.end(),*ptr_EventNumber) != events_ss_wrong.end()){
-	    //   IVYout << *ptr_EventNumber << endl;
-	    //   IVYout << "first particle pdgID (reco) " << leadingPdgId << " matched to (gen) " << genmatch_leadingPdgId << endl;
-	    //   IVYout << "second particle pdgID (reco) " << trailingPdgId << " matched to (gen) " << genmatch_trailingPdgId << endl;
-	    // }
 
 	    // Stuff for CSV output:
 	    out_leading_tightCharge = leading_tightCharge;
@@ -1072,11 +1056,10 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
         tout->fill();		// output TTree
       }
 
-      n_recorded++;
+      n_recorded++;		// # of recorded events
 
       if (firstOutputEvent) firstOutputEvent = false;
       bool start_output = 0;
-      if ((*ptr_EventNumber) == 222642183) {IVYout << (*ptr_EventNumber) << ", just before output_csv" << endl; start_output = 1;}
       // if (start_output == 1) IVYout << (*ptr_EventNumber) << endl;
 
       int EventN = *ptr_EventNumber; // dereference ptr
@@ -1098,7 +1081,7 @@ int ScanChain(std::string const& strdate, std::string const& dset, std::string c
     } // end ev entries loop
 
     IVYout << "Number of events recorded: " << n_recorded << " / " << n_traversed << " / " << nEntries << endl;
-    nevents_total_traversed += n_traversed;
+    unsigned int nevents_total_traversed = n_traversed;
     
     IVYout << "Number of events added to branches: " << n_branched << endl;
   } // end tin : tinlist

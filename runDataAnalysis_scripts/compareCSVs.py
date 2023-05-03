@@ -1,3 +1,4 @@
+# Script to compare my and Yash's csv output files. Likely to be replaced w/ a pandas df script eventually.
 import csv
 
 def compareCSVs(file1, file2):
